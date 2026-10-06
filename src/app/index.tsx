@@ -1,98 +1,58 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
+import { FlatList, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import BarangCard from "@/components/BarangCard";
+import { colors, styles } from "@/constants/styles";
+import { daftarBarang } from "@/data/barang";
+import { Barang } from "@/types/barang";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const kategori = ["Semua", "Tenda", "Carrier", "Camping", "Masak", "Elektronik"];
 
 export default function HomeScreen() {
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const filteredBarang = useMemo(() => daftarBarang.filter((barang) => {
+    const cocokSearch = barang.nama.toLowerCase().includes(search.toLowerCase());
+    const cocokKategori = selectedCategory === "Semua" || barang.kategori === selectedCategory;
+    return cocokSearch && cocokKategori;
+  }), [search, selectedCategory]);
+  const handleEdit = (barang: Barang) => console.log("Edit barang:", barang.nama);
+  const handleDelete = (barang: Barang) => console.log("Hapus barang:", barang.nama);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={filteredBarang}
+        renderItem={({ item }) => <BarangCard barang={item} onEdit={handleEdit} onDelete={handleDelete} />}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<>
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Kelola perlengkapan rental</Text>
+            <Text style={styles.title}>Halo, TendaKu 👋</Text>
+            <Text style={styles.subtitle}>Temukan dan kelola perlengkapan outdoor dengan mudah.</Text>
+          </View>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={19} color={colors.textSecondary} />
+            <TextInput value={search} onChangeText={setSearch} placeholder="Cari perlengkapan..." placeholderTextColor="#9AA39D" style={styles.searchInput} />
+          </View>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Kategori</Text></View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+            {kategori.map((item) => { const active = selectedCategory === item; return (
+              <Pressable key={item} onPress={() => setSelectedCategory(item)} style={[styles.categoryItem, active && styles.categoryItemActive]}>
+                <Text style={[styles.categoryText, active && styles.categoryTextActive]}>{item}</Text>
+              </Pressable>
+            ); })}
+          </ScrollView>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Peralatan Outdoor</Text><Text style={styles.sectionLink}>{filteredBarang.length} barang</Text></View>
+        </>}
+        ListEmptyComponent={<View style={styles.emptyContainer}><Ionicons name="search-outline" size={42} color={colors.textSecondary} /><Text style={styles.emptyText}>Barang tidak ditemukan.</Text></View>}
+        ListFooterComponent={<View style={styles.bottomSpace} />}
+      />
+      <Pressable onPress={() => console.log("Tambah barang")} style={({ pressed }) => ({ position: "absolute", right: 20, bottom: 25, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", elevation: 5, opacity: pressed ? 0.75 : 1 })}>
+        <Ionicons name="add" size={28} color={colors.white} />
+      </Pressable>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
