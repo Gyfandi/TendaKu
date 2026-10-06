@@ -1,180 +1,56 @@
-# 🏕️ TendaKu
+# Welcome to your Expo app 👋
 
-**TendaKu** adalah aplikasi mobile untuk membantu pengelolaan penyewaan perlengkapan outdoor seperti tenda, carrier, sleeping bag, kompor portable, dan perlengkapan camping lainnya.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-Aplikasi ini dirancang untuk membantu pemilik rental dalam mengelola data barang, penyewa, transaksi penyewaan, serta memantau ketersediaan perlengkapan secara lebih mudah dan terorganisir.
+## Get started
 
----
+1. Install dependencies
 
-## 📱 Tentang TendaKu
+   ```bash
+   npm install
+   ```
 
-Melakukan pengelolaan rental perlengkapan outdoor secara manual dapat menyebabkan berbagai masalah, seperti kesulitan mengetahui stok barang, pencatatan transaksi yang tidak terorganisir, hingga kesalahan dalam mencatat tanggal pengembalian.
+2. Start the app
 
-**TendaKu** hadir sebagai solusi sederhana berbasis mobile untuk membantu proses tersebut.
+   ```bash
+   npx expo start
+   ```
 
-Dengan TendaKu, pengguna dapat:
+In the output, you'll find options to open the app in a
 
-- 📦 Mengelola data perlengkapan outdoor
-- 👤 Mengelola data penyewa
-- 📝 Mencatat transaksi penyewaan
-- 📅 Mencatat tanggal peminjaman dan pengembalian
-- 📊 Memantau kondisi dan ketersediaan barang
-- 💰 Menghitung harga penyewaan
-- ⚠️ Mengetahui status barang yang sedang dipinjam atau terlambat dikembalikan
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
----
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## ✨ Fitur Utama
+## Get a fresh project
 
-### 📦 Manajemen Barang
+When you're ready, run:
 
-Digunakan untuk mengelola seluruh perlengkapan outdoor yang tersedia di rental.
+```bash
+npm run reset-project
+```
 
-Fitur meliputi:
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-- Menampilkan daftar barang
-- Menambahkan barang
-- Mengubah data barang
-- Menghapus barang
-- Mengelompokkan barang berdasarkan kategori
-- Menampilkan harga sewa per hari
-- Menampilkan jumlah stok
-- Menampilkan status ketersediaan barang
-- Pencarian barang
-- Filter berdasarkan kategori
+### Other setup steps
 
-Contoh kategori:
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
-- 🏕️ Tenda
-- 🎒 Carrier
-- 🛏️ Camping
-- 🍳 Peralatan Masak
-- 🔦 Elektronik Outdoor
+## Learn more
 
----
+To learn more about developing your project with Expo, look at the following resources:
 
-### 👤 Manajemen Penyewa
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-Digunakan untuk menyimpan data pelanggan yang melakukan penyewaan.
+## Join the community
 
-Data yang dapat dikelola antara lain:
+Join our community of developers creating universal apps.
 
-- Nama penyewa
-- Nomor telepon
-- Alamat
-- Data penyewa lainnya
-
-Fitur:
-
-- Menampilkan data penyewa
-- Menambahkan penyewa
-- Mengubah data penyewa
-- Menghapus penyewa
-- Mencari data penyewa
-
----
-
-### 📝 Manajemen Rental
-
-Digunakan untuk mencatat transaksi penyewaan perlengkapan.
-
-Informasi transaksi meliputi:
-
-- Penyewa
-- Barang yang disewa
-- Tanggal peminjaman
-- Tanggal pengembalian
-- Lama penyewaan
-- Harga sewa
-- Total biaya
-- Status transaksi
-
-Status transaksi:
-
-- 🟢 Dipinjam
-- 🔵 Dikembalikan
-- 🔴 Terlambat
-
----
-
-### 📊 Dashboard
-
-Dashboard digunakan untuk memberikan gambaran singkat mengenai kondisi rental.
-
-Informasi yang dapat ditampilkan:
-
-- Total barang
-- Barang tersedia
-- Barang sedang disewa
-- Total penyewa
-- Transaksi aktif
-- Transaksi terlambat
-- Ringkasan aktivitas rental
-
----
-
-## 🎯 Tujuan Aplikasi
-
-TendaKu dikembangkan dengan tujuan:
-
-1. Membantu pemilik rental outdoor mengelola data perlengkapan.
-2. Mempermudah pencatatan data penyewa.
-3. Mempermudah proses pencatatan transaksi rental.
-4. Mengurangi kesalahan dalam pencatatan manual.
-5. Mempermudah pemantauan ketersediaan barang.
-6. Menerapkan konsep CRUD pada aplikasi mobile.
-7. Menerapkan pengelolaan data menggunakan database.
-
----
-
-## 🛠️ Teknologi yang Digunakan
-
-TendaKu dikembangkan menggunakan teknologi berikut:
-
-| Teknologi | Keterangan |
-|---|---|
-| React Native | Framework untuk membangun aplikasi mobile |
-| Expo | Development platform untuk React Native |
-| TypeScript | Bahasa pemrograman utama |
-| Expo Router | Sistem navigasi aplikasi |
-| Git | Version control |
-| GitHub | Repository dan kolaborasi |
-| Database | Penyimpanan data aplikasi |
-
----
-
-## 📂 Struktur Project
-
-Struktur project TendaKu secara umum:
-
-```text
-TendaKu/
-├── assets/
-│   └── barang/
-│       ├── carrier-60-liter.jpeg
-│       ├── headlamp-outdoor.jpeg
-│       ├── kompor-portable.jpeg
-│       ├── matras-camping.jpeg
-│       ├── sleeping-bag.jpeg
-│       └── tenda-dome-4-person.jpeg
-│
-├── src/
-│   ├── app/
-│   │   ├── _layout.tsx
-│   │   └── index.tsx
-│   │
-│   ├── components/
-│   │   └── BarangCard.tsx
-│   │
-│   ├── constants/
-│   │   └── styles.ts
-│   │
-│   ├── data/
-│   │   └── barang.ts
-│   │
-│   └── types/
-│       └── barang.ts
-│
-├── package.json
-├── tsconfig.json
-└── README.md
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
