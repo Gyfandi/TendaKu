@@ -20,6 +20,7 @@ export default function RootLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -27,6 +28,23 @@ export default function RootLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart" size={size} color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="penyewa"
+        options={{
+          title: "Penyewa",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="barang/[id]"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

@@ -30,7 +30,7 @@ export default function HomeScreen() {
         ListHeaderComponent={<>
           <View style={styles.header}>
             <Text style={styles.greeting}>Kelola perlengkapan rental</Text>
-            <Text style={styles.title}>Halo, TendaKu 👋</Text>
+            <Text style={styles.title}>TendaKu</Text>
             <Text style={styles.subtitle}>Temukan dan kelola perlengkapan outdoor dengan mudah.</Text>
           </View>
           <View style={styles.searchContainer}>

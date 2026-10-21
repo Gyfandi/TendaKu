@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image, Pressable, Text, View, StyleSheet } from "react-native";
 import { Barang } from "@/types/barang";
 import { colors } from "@/constants/styles";
+import { router } from "expo-router";
 
 interface BarangCardProps { barang: Barang; onEdit?: (barang: Barang) => void; onDelete?: (barang: Barang) => void; }
 const formatRupiah = (harga: number): string => `Rp${harga.toLocaleString("id-ID")}`;
@@ -10,7 +11,24 @@ export default function BarangCard({ barang, onEdit, onDelete }: BarangCardProps
   const tersedia = barang.stok > 0;
   return (
     <View style={cardStyles.card}>
-      <Image source={barang.image} style={cardStyles.image} resizeMode="cover" />
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/barang/[id]",
+            params: {
+              id: String(barang.id),
+            },
+          })
+        }
+        accessibilityRole="button"
+        accessibilityLabel={`Lihat detail ${barang.nama}`}
+      >
+        <Image
+          source={barang.image}
+          style={cardStyles.image}
+          resizeMode="cover"
+        />
+      </Pressable>
       <View style={cardStyles.content}>
         <View style={cardStyles.categoryRow}>
           <Text style={cardStyles.category}>{barang.kategori}</Text>
