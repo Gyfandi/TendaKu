@@ -49,4 +49,9 @@ export const dashboardStyles = StyleSheet.create({
   },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: 11, fontWeight: "700", color: colors.white },
+    menuRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  menuButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 12 },
+  menuText: { color: colors.white, fontWeight: "700", fontSize: 14 },
+  backButton: { alignItems: "center", paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.primary, marginTop: 8 },
+  backText: { color: colors.primary, fontWeight: "700", fontSize: 14 },
 });
