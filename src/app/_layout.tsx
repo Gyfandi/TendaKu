@@ -1,54 +1,43 @@
 import { colors } from "@/constants/styles";
 import { RentalProvider } from "@/context/RentalContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { Pressable, View } from "react-native";
 
 export default function RootLayout() {
+  const router = useRouter();
+
   return (
     <RentalProvider>
-      <Tabs
-        backBehavior="history"
+      <Stack
         screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textSecondary,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: colors.white,
+          headerTitleStyle: { fontWeight: "700" },
         }}
       >
-        <Tabs.Screen
+        <Stack.Screen
           name="index"
           options={{
-            title: "Barang",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cube" size={size} color={color} />
+            title: "TendaKu",
+            headerRight: () => (
+              <View style={{ flexDirection: "row", gap: 18 }}>
+                <Pressable onPress={() => router.push("/dashboard")}>
+                  <Ionicons name="stats-chart" size={22} color={colors.white} />
+                </Pressable>
+                <Pressable onPress={() => router.push("/penyewa")}>
+                  <Ionicons name="people" size={22} color={colors.white} />
+                </Pressable>
+              </View>
             ),
           }}
         />
-
-        <Tabs.Screen
-          name="dashboard"
-          options={{
-            title: "Dashboard",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="stats-chart" size={size} color={color} />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="penyewa"
-          options={{
-            title: "Penyewa",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people" size={size} color={color} />
-            ),
-          }}
-        />
-
-        {/* Layar tersembunyi (tidak muncul di tab bar) */}
-        <Tabs.Screen name="barang/[id]" options={{ href: null }} />
-        <Tabs.Screen name="penyewaan/index" options={{ href: null }} />
-        <Tabs.Screen name="penyewaan/ringkasan" options={{ href: null }} />
-      </Tabs>
+        <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
+        <Stack.Screen name="penyewa" options={{ title: "Penyewa" }} />
+        <Stack.Screen name="barang/[id]" options={{ title: "Detail Barang" }} />
+        <Stack.Screen name="penyewaan/index" options={{ title: "Form Penyewaan" }} />
+        <Stack.Screen name="penyewaan/ringkasan" options={{ title: "Ringkasan Transaksi" }} />
+      </Stack>
     </RentalProvider>
   );
 }
