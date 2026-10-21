@@ -11,12 +11,13 @@ import {
 } from "react-native";
 
 import { colors } from "@/constants/styles";
-import { daftarBarang } from "@/data/barang";
+import { useRental } from "@/context/RentalContext";
 
 const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { barang: daftarBarang } = useRental();
 
   const barang = daftarBarang.find((item) => item.id === Number(id));
 
@@ -114,7 +115,12 @@ export default function DetailBarangScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.push("/penyewa")}
+            onPress={() =>
+              router.push({
+                pathname: "/penyewaan",
+                params: { id: String(barang.id) },
+              })
+            }
             disabled={!tersedia}
             style={({ pressed }) => [
               styles.rentButton,

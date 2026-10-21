@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
 import BarangCard from "@/components/BarangCard";
 import { colors, styles } from "@/constants/styles";
-import { daftarBarang } from "@/data/barang";
+import { useRental } from "@/context/RentalContext";
 import { Barang } from "@/types/barang";
 
 const kategori = ["Semua", "Tenda", "Carrier", "Camping", "Masak", "Elektronik"];
@@ -11,11 +11,12 @@ const kategori = ["Semua", "Tenda", "Carrier", "Camping", "Masak", "Elektronik"]
 export default function HomeScreen() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const { barang: daftarBarang } = useRental();
   const filteredBarang = useMemo(() => daftarBarang.filter((barang) => {
     const cocokSearch = barang.nama.toLowerCase().includes(search.toLowerCase());
     const cocokKategori = selectedCategory === "Semua" || barang.kategori === selectedCategory;
     return cocokSearch && cocokKategori;
-  }), [search, selectedCategory]);
+  }), [search, selectedCategory, daftarBarang]);
   const handleEdit = (barang: Barang) => console.log("Edit barang:", barang.nama);
   const handleDelete = (barang: Barang) => console.log("Hapus barang:", barang.nama);
 

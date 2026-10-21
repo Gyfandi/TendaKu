@@ -1,8 +1,7 @@
 import StatCard from "@/components/StatCard";
 import { dashboardStyles } from "@/constants/dashboardStyles";
 import { colors, styles } from "@/constants/styles";
-import { daftarBarang } from "@/data/barang";
-import { daftarTransaksi } from "@/data/transaksi";
+import { useRental } from "@/context/RentalContext";
 import { StatusTransaksi } from "@/types/transaksi";
 import {
   formatRupiah,
@@ -29,6 +28,8 @@ const warnaStatus = (status: StatusTransaksi): string => {
 };
 
 export default function Dashboard() {
+  const { barang: daftarBarang, transaksi: daftarTransaksi } = useRental();
+
   const transaksiAktif = daftarTransaksi.filter(
     (t) => getStatusAktual(t) !== "dikembalikan",
   );
