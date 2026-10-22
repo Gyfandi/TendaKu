@@ -19,17 +19,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="index"
           options={{
-            title: "TendaKu",
-            headerRight: () => (
-              <View style={{ flexDirection: "row", gap: 18 }}>
-                <Pressable onPress={() => router.push("/dashboard")}>
-                  <Ionicons name="stats-chart" size={22} color={colors.white} />
-                </Pressable>
-                <Pressable onPress={() => router.push("/penyewa")}>
-                  <Ionicons name="people" size={22} color={colors.white} />
-                </Pressable>
-              </View>
-            ),
+            headerShown: false,
           }}
         />
         <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
