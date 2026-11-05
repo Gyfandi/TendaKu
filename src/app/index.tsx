@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import {
   FlatList,
   Image,
@@ -30,6 +31,7 @@ const kategori = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isAdmin, user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
 
@@ -73,19 +75,30 @@ export default function HomeScreen() {
                 </View>
               </View>
               <View style={s.topActions}>
+                {isAdmin && (
+                  <>
+                    <Pressable
+                      accessibilityLabel="Buka dashboard admin"
+                      onPress={() => router.push("/dashboard")}
+                      style={s.topAction}
+                    >
+                      <Ionicons name="stats-chart-outline" size={21} color={colors.white} />
+                    </Pressable>
+                    <Pressable
+                      accessibilityLabel="Buka data penyewa"
+                      onPress={() => router.push("/penyewa")}
+                      style={s.topAction}
+                    >
+                      <Ionicons name="people-outline" size={22} color={colors.white} />
+                    </Pressable>
+                  </>
+                )}
                 <Pressable
-                  accessibilityLabel="Buka dashboard"
-                  onPress={() => router.push("/dashboard")}
+                  accessibilityLabel={user ? "Buka profil" : "Login atau daftar"}
+                  onPress={() => router.push(user ? "/profile" : "/login")}
                   style={s.topAction}
                 >
-                  <Ionicons name="stats-chart-outline" size={21} color={colors.white} />
-                </Pressable>
-                <Pressable
-                  accessibilityLabel="Buka penyewa"
-                  onPress={() => router.push("/penyewa")}
-                  style={s.topAction}
-                >
-                  <Ionicons name="people-outline" size={22} color={colors.white} />
+                  <Ionicons name="person-circle-outline" size={23} color={colors.white} />
                 </Pressable>
               </View>
             </View>
@@ -213,13 +226,15 @@ export default function HomeScreen() {
         }
         ListFooterComponent={<View style={{ height: 34 }} />}
       />
-      <Pressable
-        onPress={() => console.log("Tambah barang")}
-        accessibilityLabel="Tambah barang"
-        style={({ pressed }) => [s.fab, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}
-      >
-        <Ionicons name="add" size={29} color={colors.white} />
-      </Pressable>
+      {isAdmin && (
+        <Pressable
+          onPress={() => console.log("Tambah barang")}
+          accessibilityLabel="Tambah barang"
+          style={({ pressed }) => [s.fab, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}
+        >
+          <Ionicons name="add" size={29} color={colors.white} />
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }

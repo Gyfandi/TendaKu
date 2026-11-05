@@ -2,12 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image, Pressable, Text, View, StyleSheet } from "react-native";
 import { Barang } from "@/types/barang";
 import { colors } from "@/constants/styles";
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 
 interface BarangCardProps { barang: Barang; onEdit?: (barang: Barang) => void; onDelete?: (barang: Barang) => void; }
 const formatRupiah = (harga: number): string => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function BarangCard({ barang, onEdit, onDelete }: BarangCardProps) {
+  const { isAdmin } = useAuth();
   const tersedia = barang.stok > 0;
   return (
     <View style={cardStyles.card}>
@@ -41,10 +43,16 @@ export default function BarangCard({ barang, onEdit, onDelete }: BarangCardProps
         <View style={cardStyles.priceRow}><Text style={cardStyles.price}>{formatRupiah(barang.hargaPerHari)}</Text><Text style={cardStyles.perDay}> / hari</Text></View>
         <View style={cardStyles.footer}>
           <View style={cardStyles.stockContainer}><Ionicons name="cube-outline" size={15} color={colors.textSecondary} /><Text style={cardStyles.stock}>Stok {barang.stok}</Text></View>
-          <View style={cardStyles.actions}>
-            <Pressable onPress={() => onEdit?.(barang)} style={({ pressed }) => [cardStyles.actionButton, { opacity: pressed ? 0.6 : 1 }]}><Ionicons name="create-outline" size={17} color={colors.primary} /></Pressable>
-            <Pressable onPress={() => onDelete?.(barang)} style={({ pressed }) => [cardStyles.actionButton, { opacity: pressed ? 0.6 : 1 }]}><Ionicons name="trash-outline" size={17} color={colors.danger} /></Pressable>
-          </View>
+          {isAdmin && (
+            <View style={cardStyles.actions}>
+              <Pressable onPress={() => onEdit?.(barang)} accessibilityLabel={`Edit ${barang.nama}`} style={({ pressed }) => [cardStyles.actionButton, { opacity: pressed ? 0.6 : 1 }]}>
+                <Ionicons name="create-outline" size={17} color={colors.primary} />
+              </Pressable>
+              <Pressable onPress={() => onDelete?.(barang)} accessibilityLabel={`Hapus ${barang.nama}`} style={({ pressed }) => [cardStyles.actionButton, { opacity: pressed ? 0.6 : 1 }]}>
+                <Ionicons name="trash-outline" size={17} color={colors.danger} />
+              </Pressable>
+            </View>
+          )}
         </View>
       </View>
     </View>
