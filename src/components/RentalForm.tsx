@@ -1,6 +1,7 @@
 import { colors } from "@/constants/styles";
 import { rentalStyles as s } from "@/constants/rentalStyles";
 import { useRental } from "@/context/RentalContext";
+import { useAuth } from "@/context/AuthContext";
 import { Barang } from "@/types/barang";
 import { formatRupiah, hitungDurasi, hitungTotalHarga } from "@/utils/hitung";
 import { parseTanggal, tanggalDefault } from "@/utils/tanggal";
@@ -22,7 +23,8 @@ interface RentalFormProps {
 
 export default function RentalForm({ barang, onSubmit }: RentalFormProps) {
   const { transaksi } = useRental();
-  const [penyewa, setPenyewa] = useState("");
+  const { user } = useAuth();
+  const [penyewa, setPenyewa] = useState(user?.fullName ?? "");
   const [tanggalPinjam, setTanggalPinjam] = useState(tanggalDefault(0));
   const [tanggalKembali, setTanggalKembali] = useState(tanggalDefault(1));
   const [jumlah, setJumlah] = useState(1);
@@ -31,12 +33,12 @@ export default function RentalForm({ barang, onSubmit }: RentalFormProps) {
   // Layar di dalam Tabs tetap ter-mount, jadi form direset saat barang
   // berganti atau setelah sebuah transaksi tersimpan.
   useEffect(() => {
-    setPenyewa("");
+    setPenyewa(user?.fullName ?? "");
     setTanggalPinjam(tanggalDefault(0));
     setTanggalKembali(tanggalDefault(1));
     setJumlah(1);
     setSudahCoba(false);
-  }, [barang.id, transaksi.length]);
+  }, [barang.id, transaksi.length, user?.fullName]);
 
   const tglPinjam = parseTanggal(tanggalPinjam);
   const tglKembali = parseTanggal(tanggalKembali);

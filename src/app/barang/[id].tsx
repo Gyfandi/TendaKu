@@ -12,12 +12,14 @@ import {
 
 import { colors } from "@/constants/styles";
 import { useRental } from "@/context/RentalContext";
+import { useAuth } from "@/context/AuthContext";
 
 const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { barang: daftarBarang } = useRental();
+  const { user, isAdmin } = useAuth();
 
   const barang = daftarBarang.find((item) => item.id === Number(id));
 
@@ -114,26 +116,37 @@ export default function DetailBarangScreen() {
             </View>
           </View>
 
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/penyewaan",
-                params: { id: String(barang.id) },
-              })
-            }
-            disabled={!tersedia}
-            style={({ pressed }) => [
-              styles.rentButton,
-              {
-                opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.rentButtonText}>
-              {tersedia ? "Lanjut ke Penyewaan" : "Stok Habis"}
-            </Text>
-          </Pressable>
+          {isAdmin ? (
+            <View style={styles.adminNotice}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text style={styles.adminNoticeText}>
+                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat melakukan penyewaan.
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                if (!user) {
+                  router.push("/login");
+                  return;
+                }
+                router.push({
+                  pathname: "/penyewaan",
+                  params: { id: String(barang.id) },
+                });
+              }}
+              disabled={!tersedia}
+              style={({ pressed }) => [
+                styles.rentButton,
+                { opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1 },
+              ]}
+            >
+              <Ionicons name={user ? "calendar-outline" : "log-in-outline"} size={20} color="#FFFFFF" />
+              <Text style={styles.rentButtonText}>
+                {!tersedia ? "Stok Habis" : user ? "Lanjut ke Penyewaan" : "Login untuk Menyewa"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -241,6 +254,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+  },
+  adminNotice: {
+    marginTop: 22,
+    minHeight: 58,
+    borderRadius: 14,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  adminNoticeText: {
+    flex: 1,
+    color: colors.primaryDark,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   rentButtonText: {
     color: "#FFFFFF",
