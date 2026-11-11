@@ -1,13 +1,12 @@
-
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,17 +15,13 @@ import { colors } from "@/constants/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useRental } from "@/context/RentalContext";
 
-const formatRupiah = (harga: number) =>
-  `Rp${harga.toLocaleString("id-ID")}`;
+const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const {
-    barang: daftarBarang,
-    isLoading,
-    error,
-    muatUlang,
-  } = useRental();
+
+  const { barang: daftarBarang, isLoading, error, muatUlang } = useRental();
+
   const { user, isAdmin } = useAuth();
 
   // Menampilkan loading atau error ketika data sedang dimuat.
@@ -44,9 +39,7 @@ export default function DetailBarangScreen() {
   }
 
   // Mencari barang berdasarkan ID.
-  const barang = daftarBarang.find(
-    (item) => item.id === Number(id)
-  );
+  const barang = daftarBarang.find((item) => item.id === Number(id));
 
   // Menampilkan pesan jika barang tidak ditemukan.
   if (!barang) {
@@ -58,9 +51,7 @@ export default function DetailBarangScreen() {
             size={48}
             color={colors.danger}
           />
-          <Text style={styles.title}>
-            Barang tidak ditemukan
-          </Text>
+          <Text style={styles.title}>Barang tidak ditemukan</Text>
           <Text style={styles.description}>
             Data barang yang kamu cari tidak tersedia.
           </Text>
@@ -75,20 +66,12 @@ export default function DetailBarangScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Gambar barang */}
-        <Image
-          source={barang.image}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Image source={barang.image} style={styles.image} resizeMode="cover" />
 
         <View style={styles.content}>
-          <Text style={styles.category}>
-            {barang.kategori}
-          </Text>
+          <Text style={styles.category}>{barang.kategori}</Text>
 
-          <Text style={styles.title}>
-            {barang.nama}
-          </Text>
+          <Text style={styles.title}>{barang.nama}</Text>
 
           <Text style={styles.price}>
             {formatRupiah(barang.hargaPerHari)}
@@ -100,80 +83,50 @@ export default function DetailBarangScreen() {
             style={[
               styles.stockBadge,
               {
-                backgroundColor: tersedia
-                  ? "#E7F5EC"
-                  : "#FDECEC",
+                backgroundColor: tersedia ? "#E7F5EC" : "#FDECEC",
               },
             ]}
           >
             <Ionicons
-              name={
-                tersedia
-                  ? "checkmark-circle"
-                  : "close-circle"
-              }
+              name={tersedia ? "checkmark-circle" : "close-circle"}
               size={18}
-              color={
-                tersedia
-                  ? colors.success
-                  : colors.danger
-              }
+              color={tersedia ? colors.success : colors.danger}
             />
 
             <Text
               style={{
-                color: tersedia
-                  ? colors.success
-                  : colors.danger,
+                color: tersedia ? colors.success : colors.danger,
                 fontWeight: "700",
               }}
             >
-              {tersedia
-                ? `Stok tersedia: ${barang.stok}`
-                : "Stok habis"}
+              {tersedia ? `Stok tersedia: ${barang.stok}` : "Stok habis"}
             </Text>
           </View>
 
           {/* Informasi barang */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>
-              Informasi Barang
-            </Text>
+            <Text style={styles.infoTitle}>Informasi Barang</Text>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>
-                Nama barang
-              </Text>
-              <Text style={styles.value}>
-                {barang.nama}
-              </Text>
+              <Text style={styles.label}>Nama barang</Text>
+              <Text style={styles.value}>{barang.nama}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>
-                Kategori
-              </Text>
-              <Text style={styles.value}>
-                {barang.kategori}
-              </Text>
+              <Text style={styles.label}>Kategori</Text>
+              <Text style={styles.value}>{barang.kategori}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>
-                Harga sewa
-              </Text>
+              <Text style={styles.label}>Harga sewa</Text>
               <Text style={styles.value}>
                 {formatRupiah(barang.hargaPerHari)} / hari
               </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>
-                Stok
-              </Text>
-              <Text style={styles.value}>
-                {barang.stok} unit
-              </Text>
+              <Text style={styles.label}>Stok</Text>
+              <Text style={styles.value}>{barang.stok} unit</Text>
             </View>
           </View>
 
@@ -187,8 +140,8 @@ export default function DetailBarangScreen() {
               />
 
               <Text style={styles.adminNoticeText}>
-                Akun Admin hanya dapat mengelola perlengkapan
-                dan tidak dapat melakukan penyewaan.
+                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat
+                melakukan penyewaan.
               </Text>
             </View>
           ) : (
@@ -208,20 +161,12 @@ export default function DetailBarangScreen() {
               style={({ pressed }) => [
                 styles.rentButton,
                 {
-                  opacity: !tersedia
-                    ? 0.5
-                    : pressed
-                      ? 0.8
-                      : 1,
+                  opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1,
                 },
               ]}
             >
               <Ionicons
-                name={
-                  user
-                    ? "calendar-outline"
-                    : "log-in-outline"
-                }
+                name={user ? "calendar-outline" : "log-in-outline"}
                 size={20}
                 color="#FFFFFF"
               />
