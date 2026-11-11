@@ -1,43 +1,66 @@
+
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    Image,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import AsyncState from "@/components/AsyncState";
 import { colors } from "@/constants/styles";
-import { useRental } from "@/context/RentalContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRental } from "@/context/RentalContext";
 
-const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
+const formatRupiah = (harga: number) =>
+  `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { barang: daftarBarang } = useRental();
+  const {
+    barang: daftarBarang,
+    isLoading,
+    error,
+    muatUlang,
+  } = useRental();
   const { user, isAdmin } = useAuth();
 
-  const barang = daftarBarang.find((item) => item.id === Number(id));
+  // Menampilkan loading atau error ketika data sedang dimuat.
+  if (isLoading || error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <AsyncState
+          loading={isLoading}
+          error={error}
+          onRetry={muatUlang}
+          loadingText="Memuat barang..."
+        />
+      </SafeAreaView>
+    );
+  }
 
+  // Mencari barang berdasarkan ID.
+  const barang = daftarBarang.find(
+    (item) => item.id === Number(id)
+  );
+
+  // Menampilkan pesan jika barang tidak ditemukan.
   if (!barang) {
     return (
       <SafeAreaView style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-          <Text style={styles.backText}>Kembali</Text>
-        </Pressable>
-
         <View style={styles.center}>
           <Ionicons
             name="alert-circle-outline"
             size={48}
             color={colors.danger}
           />
-          <Text style={styles.title}>Barang tidak ditemukan</Text>
+          <Text style={styles.title}>
+            Barang tidak ditemukan
+          </Text>
           <Text style={styles.description}>
             Data barang yang kamu cari tidak tersedia.
           </Text>
@@ -51,76 +74,121 @@ export default function DetailBarangScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-          <Text style={styles.backText}>Kembali ke daftar</Text>
-        </Pressable>
-
-        <Image source={barang.image} style={styles.image} resizeMode="cover" />
+        {/* Gambar barang */}
+        <Image
+          source={barang.image}
+          style={styles.image}
+          resizeMode="cover"
+        />
 
         <View style={styles.content}>
-          <Text style={styles.category}>{barang.kategori}</Text>
-          <Text style={styles.title}>{barang.nama}</Text>
+          <Text style={styles.category}>
+            {barang.kategori}
+          </Text>
+
+          <Text style={styles.title}>
+            {barang.nama}
+          </Text>
 
           <Text style={styles.price}>
             {formatRupiah(barang.hargaPerHari)}
             <Text style={styles.perDay}> / hari</Text>
           </Text>
 
+          {/* Status stok */}
           <View
             style={[
               styles.stockBadge,
               {
-                backgroundColor: tersedia ? "#E7F5EC" : "#FDECEC",
+                backgroundColor: tersedia
+                  ? "#E7F5EC"
+                  : "#FDECEC",
               },
             ]}
           >
             <Ionicons
-              name={tersedia ? "checkmark-circle" : "close-circle"}
+              name={
+                tersedia
+                  ? "checkmark-circle"
+                  : "close-circle"
+              }
               size={18}
-              color={tersedia ? colors.success : colors.danger}
+              color={
+                tersedia
+                  ? colors.success
+                  : colors.danger
+              }
             />
+
             <Text
               style={{
-                color: tersedia ? colors.success : colors.danger,
+                color: tersedia
+                  ? colors.success
+                  : colors.danger,
                 fontWeight: "700",
               }}
             >
-              {tersedia ? `Stok tersedia: ${barang.stok}` : "Stok habis"}
+              {tersedia
+                ? `Stok tersedia: ${barang.stok}`
+                : "Stok habis"}
             </Text>
           </View>
 
+          {/* Informasi barang */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Informasi Barang</Text>
+            <Text style={styles.infoTitle}>
+              Informasi Barang
+            </Text>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Nama barang</Text>
-              <Text style={styles.value}>{barang.nama}</Text>
+              <Text style={styles.label}>
+                Nama barang
+              </Text>
+              <Text style={styles.value}>
+                {barang.nama}
+              </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Kategori</Text>
-              <Text style={styles.value}>{barang.kategori}</Text>
+              <Text style={styles.label}>
+                Kategori
+              </Text>
+              <Text style={styles.value}>
+                {barang.kategori}
+              </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Harga sewa</Text>
+              <Text style={styles.label}>
+                Harga sewa
+              </Text>
               <Text style={styles.value}>
                 {formatRupiah(barang.hargaPerHari)} / hari
               </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Stok</Text>
-              <Text style={styles.value}>{barang.stok} unit</Text>
+              <Text style={styles.label}>
+                Stok
+              </Text>
+              <Text style={styles.value}>
+                {barang.stok} unit
+              </Text>
             </View>
           </View>
 
+          {/* Tombol penyewaan atau pemberitahuan Admin */}
           {isAdmin ? (
             <View style={styles.adminNotice}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={colors.primary}
+              />
+
               <Text style={styles.adminNoticeText}>
-                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat melakukan penyewaan.
+                Akun Admin hanya dapat mengelola perlengkapan
+                dan tidak dapat melakukan penyewaan.
               </Text>
             </View>
           ) : (
@@ -130,6 +198,7 @@ export default function DetailBarangScreen() {
                   router.push("/login");
                   return;
                 }
+
                 router.push({
                   pathname: "/penyewaan",
                   params: { id: String(barang.id) },
@@ -138,12 +207,31 @@ export default function DetailBarangScreen() {
               disabled={!tersedia}
               style={({ pressed }) => [
                 styles.rentButton,
-                { opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1 },
+                {
+                  opacity: !tersedia
+                    ? 0.5
+                    : pressed
+                      ? 0.8
+                      : 1,
+                },
               ]}
             >
-              <Ionicons name={user ? "calendar-outline" : "log-in-outline"} size={20} color="#FFFFFF" />
+              <Ionicons
+                name={
+                  user
+                    ? "calendar-outline"
+                    : "log-in-outline"
+                }
+                size={20}
+                color="#FFFFFF"
+              />
+
               <Text style={styles.rentButtonText}>
-                {!tersedia ? "Stok Habis" : user ? "Lanjut ke Penyewaan" : "Login untuk Menyewa"}
+                {!tersedia
+                  ? "Stok Habis"
+                  : user
+                    ? "Lanjut ke Penyewaan"
+                    : "Login untuk Menyewa"}
               </Text>
             </Pressable>
           )}
@@ -157,18 +245,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
   },
   image: {
     width: "100%",

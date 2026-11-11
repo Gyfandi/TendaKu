@@ -31,7 +31,7 @@ function RootNavigator() {
     }
 
     if (isAuthRoute && user) {
-      router.replace("/profile");
+      router.replace("/");
       return;
     }
 
