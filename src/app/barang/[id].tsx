@@ -12,24 +12,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncState from "@/components/AsyncState";
 import { colors } from "@/constants/styles";
-import { useRental } from "@/context/RentalContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRental } from "@/context/RentalContext";
 
 const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const { barang: daftarBarang, isLoading, error, muatUlang } = useRental();
+
   const { user, isAdmin } = useAuth();
 
-  // Tunggu data selesai dimuat agar tidak sempat tampil "Barang tidak ditemukan".
+  // Menampilkan loading atau error ketika data sedang dimuat.
   if (isLoading || error) {
     return (
       <SafeAreaView style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-          <Text style={styles.backText}>Kembali</Text>
-        </Pressable>
         <AsyncState
           loading={isLoading}
           error={error}
@@ -40,16 +38,13 @@ export default function DetailBarangScreen() {
     );
   }
 
+  // Mencari barang berdasarkan ID.
   const barang = daftarBarang.find((item) => item.id === Number(id));
 
+  // Menampilkan pesan jika barang tidak ditemukan.
   if (!barang) {
     return (
       <SafeAreaView style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-          <Text style={styles.backText}>Kembali</Text>
-        </Pressable>
-
         <View style={styles.center}>
           <Ionicons
             name="alert-circle-outline"
@@ -70,15 +65,12 @@ export default function DetailBarangScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-          <Text style={styles.backText}>Kembali ke daftar</Text>
-        </Pressable>
-
+        {/* Gambar barang */}
         <Image source={barang.image} style={styles.image} resizeMode="cover" />
 
         <View style={styles.content}>
           <Text style={styles.category}>{barang.kategori}</Text>
+
           <Text style={styles.title}>{barang.nama}</Text>
 
           <Text style={styles.price}>
@@ -86,6 +78,7 @@ export default function DetailBarangScreen() {
             <Text style={styles.perDay}> / hari</Text>
           </Text>
 
+          {/* Status stok */}
           <View
             style={[
               styles.stockBadge,
@@ -99,6 +92,7 @@ export default function DetailBarangScreen() {
               size={18}
               color={tersedia ? colors.success : colors.danger}
             />
+
             <Text
               style={{
                 color: tersedia ? colors.success : colors.danger,
@@ -109,6 +103,7 @@ export default function DetailBarangScreen() {
             </Text>
           </View>
 
+          {/* Informasi barang */}
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Informasi Barang</Text>
 
@@ -135,11 +130,18 @@ export default function DetailBarangScreen() {
             </View>
           </View>
 
+          {/* Tombol penyewaan atau pemberitahuan Admin */}
           {isAdmin ? (
             <View style={styles.adminNotice}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={colors.primary}
+              />
+
               <Text style={styles.adminNoticeText}>
-                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat melakukan penyewaan.
+                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat
+                melakukan penyewaan.
               </Text>
             </View>
           ) : (
@@ -149,6 +151,7 @@ export default function DetailBarangScreen() {
                   router.push("/login");
                   return;
                 }
+
                 router.push({
                   pathname: "/penyewaan",
                   params: { id: String(barang.id) },
@@ -157,12 +160,23 @@ export default function DetailBarangScreen() {
               disabled={!tersedia}
               style={({ pressed }) => [
                 styles.rentButton,
-                { opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1 },
+                {
+                  opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1,
+                },
               ]}
             >
-              <Ionicons name={user ? "calendar-outline" : "log-in-outline"} size={20} color="#FFFFFF" />
+              <Ionicons
+                name={user ? "calendar-outline" : "log-in-outline"}
+                size={20}
+                color="#FFFFFF"
+              />
+
               <Text style={styles.rentButtonText}>
-                {!tersedia ? "Stok Habis" : user ? "Lanjut ke Penyewaan" : "Login untuk Menyewa"}
+                {!tersedia
+                  ? "Stok Habis"
+                  : user
+                    ? "Lanjut ke Penyewaan"
+                    : "Login untuk Menyewa"}
               </Text>
             </Pressable>
           )}
@@ -176,18 +190,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
   },
   image: {
     width: "100%",

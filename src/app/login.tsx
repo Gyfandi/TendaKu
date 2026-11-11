@@ -19,14 +19,21 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (submitting || !username.trim() || !password) return;
-    setError("");
-    setSubmitting(true);
-    const success = await login(username, password);
-    setSubmitting(false);
-    if (success) router.replace("/profile");
-    else setError("Username atau password tidak sesuai.");
-  };
+  if (submitting || !username.trim() || !password) return;
+
+  setError("");
+  setSubmitting(true);
+
+  const success = await login(username, password);
+
+  setSubmitting(false);
+
+  if (success) {
+    router.replace("/");
+  } else {
+    setError("Username atau password tidak sesuai.");
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
