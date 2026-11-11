@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import AsyncState from "@/components/AsyncState";
@@ -6,7 +7,44 @@ import { weatherStyles as s } from "@/constants/asyncStyles";
 import { colors } from "@/constants/styles";
 import { useAsync } from "@/hooks/use-async";
 import { ambilCuacaSemuaLokasi } from "@/services/cuacaService";
+import { cekKelayakanCamping } from "@/services/kelayakanService";
+import type { WeatherCurrent } from "@/types/weather";
 import { deskripsiCuaca, saranKamping } from "@/utils/cuaca";
+
+/**
+ * Menampilkan hasil cekKelayakanCamping() untuk satu lokasi.
+ * Dibuat sebagai komponen sendiri karena hook (useState/useEffect)
+ * tidak boleh dipanggil di dalam data.map(...).
+ */
+function KelayakanBadge({ current }: { current: WeatherCurrent }) {
+  const [hasil, setHasil] = useState<{ layak: boolean; pesan: string } | null>(null);
+
+  useEffect(() => {
+    cekKelayakanCamping(current).then(
+      // Promise.resolve -> layak
+      (pesan) => setHasil({ layak: true, pesan }),
+      // Promise.reject -> tidak layak
+      (err: Error) => setHasil({ layak: false, pesan: err.message }),
+    );
+  }, [current]);
+
+  if (!hasil) return null;
+
+  const warna = hasil.layak ? colors.success : colors.danger;
+
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
+      <Ionicons
+        name={hasil.layak ? "checkmark-circle" : "close-circle"}
+        size={16}
+        color={warna}
+      />
+      <Text style={{ color: warna, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>
+        {hasil.layak ? "Layak" : "Tidak layak"}: {hasil.pesan}
+      </Text>
+    </View>
+  );
+}
 
 export default function WeatherCard() {
   const { data, loading, error, muatUlang } = useAsync(ambilCuacaSemuaLokasi);
@@ -69,6 +107,7 @@ export default function WeatherCard() {
                   {unit.relative_humidity_2m} · Angin {current.wind_speed_10m} {unit.wind_speed_10m}
                 </Text>
                 <Text style={s.saran}>{saranKamping(current)}</Text>
+                <KelayakanBadge current={current} />
               </View>
               <Text style={s.suhu}>
                 {Math.round(current.temperature_2m)}
