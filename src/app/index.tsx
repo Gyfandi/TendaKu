@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useRental } from "@/context/RentalContext";
 import {
   FlatList,
-  ImageBackground,
+  Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
@@ -15,9 +15,11 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncState from "@/components/AsyncState";
 import BarangCard from "@/components/BarangCard";
+import WeatherCard from "@/components/WeatherCard";
 import { colors } from "@/constants/styles";
-import { daftarBarang } from "@/data/barang";
 import { Barang } from "@/types/barang";
 
 const kategori = [
@@ -32,6 +34,8 @@ const kategori = [
 export default function HomeScreen() {
   const router = useRouter();
   const { isAdmin, user } = useAuth();
+  // Data barang kini dimuat secara async lewat RentalContext.
+  const { barang: daftarBarang, isLoading, error, muatUlang } = useRental();
   const { width } = useWindowDimensions();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
@@ -53,7 +57,7 @@ export default function HomeScreen() {
           barang.kategori.toLowerCase() === selectedCategory.toLowerCase();
         return cocokSearch && cocokKategori;
       }),
-    [search, selectedCategory],
+    [daftarBarang, search, selectedCategory],
   );
 
   const handleEdit = (barang: Barang) => console.log("Edit barang:", barang.nama);
@@ -130,9 +134,7 @@ export default function HomeScreen() {
                 <Text style={s.introCopy}>Siapkan perlengkapanmu, jelajahi alam lebih jauh.</Text>
               </View>
 
-              <ImageBackground
-                source={require("@/assets/barang/tenda-dome-4-person.jpeg")}
-                imageStyle={s.heroImage}
+              <View
                 style={[
                   s.hero,
                   {
@@ -141,6 +143,11 @@ export default function HomeScreen() {
                   },
                 ]}
               >
+                <Image
+                  source={require("@/assets/barang/tenda-dome-4-person.jpeg")}
+                  style={s.heroImage}
+                  resizeMode="cover"
+                />
                 <View style={s.heroShade} />
                 <View style={[s.heroContent, { paddingHorizontal: isMobile ? 19 : 32 }]}>
                   <View style={s.heroPill}>
@@ -164,7 +171,7 @@ export default function HomeScreen() {
                     <Ionicons name="arrow-forward" size={16} color={colors.primaryDark} />
                   </Pressable>
                 </View>
-              </ImageBackground>
+              </View>
 
               <View style={s.sectionHeading}>
                 <View>
@@ -233,6 +240,9 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={18} color={colors.primary} />
               </View>
 
+              {/* Cuaca lokasi camping (data dari External API, dimuat async) */}
+              <WeatherCard />
+
               <View style={s.itemsHeading}>
                 <View>
                   <Text style={s.sectionTitle}>
@@ -248,13 +258,22 @@ export default function HomeScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={s.emptyContainer}>
-            <View style={s.emptyIcon}>
-              <Ionicons name="search-outline" size={32} color={colors.primary} />
+          isLoading || error ? (
+            <AsyncState
+              loading={isLoading}
+              error={error}
+              onRetry={muatUlang}
+              loadingText="Memuat perlengkapan..."
+            />
+          ) : (
+            <View style={s.emptyContainer}>
+              <View style={s.emptyIcon}>
+                <Ionicons name="search-outline" size={32} color={colors.primary} />
+              </View>
+              <Text style={s.emptyTitle}>Perlengkapan belum ditemukan</Text>
+              <Text style={s.emptyText}>Coba kata kunci atau kategori yang berbeda.</Text>
             </View>
-            <Text style={s.emptyTitle}>Perlengkapan belum ditemukan</Text>
-            <Text style={s.emptyText}>Coba kata kunci atau kategori yang berbeda.</Text>
-          </View>
+          )
         }
         ListFooterComponent={<View style={{ height: 34 }} />}
       />
@@ -311,7 +330,7 @@ const s = StyleSheet.create({
     marginBottom: 0, borderRadius: 28, overflow: "hidden",
     justifyContent: "center", backgroundColor: colors.primaryDark,
   },
-  heroImage: { width: "100%", height: "100%", borderRadius: 28, resizeMode: "cover" },
+  heroImage: { ...StyleSheet.absoluteFill },
   heroShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(12, 48, 30, 0.70)",

@@ -1,3 +1,4 @@
+import AsyncState from "@/components/AsyncState";
 import StatCard from "@/components/StatCard";
 import { dashboardStyles } from "@/constants/dashboardStyles";
 import { colors, styles } from "@/constants/styles";
@@ -41,7 +42,13 @@ const warnaStatus = (status: StatusTransaksi): string => {
 export default function Dashboard() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { barang: daftarBarang, transaksi: daftarTransaksi } = useRental();
+  const {
+    barang: daftarBarang,
+    transaksi: daftarTransaksi,
+    isLoading,
+    error,
+    muatUlang,
+  } = useRental();
 
   // useState: filter status yang sedang dipilih
   const [filter, setFilter] = useState<FilterStatus>("semua");
@@ -78,6 +85,20 @@ export default function Dashboard() {
       router.replace("/");
     }
   };
+
+  // Loading / error saat data rental masih dimuat secara async.
+  // Diletakkan setelah semua hook agar urutan hook tetap konsisten.
+  if (isLoading || error) {
+    return (
+      <AsyncState
+        loading={isLoading}
+        error={error}
+        onRetry={muatUlang}
+        loadingText="Memuat dashboard..."
+        fullScreen
+      />
+    );
+  }
 
   const statList: StatItem[] = [
     {

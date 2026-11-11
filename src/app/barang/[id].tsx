@@ -3,13 +3,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
     Image,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import AsyncState from "@/components/AsyncState";
 import { colors } from "@/constants/styles";
 import { useRental } from "@/context/RentalContext";
 import { useAuth } from "@/context/AuthContext";
@@ -18,8 +19,26 @@ const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
 
 export default function DetailBarangScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { barang: daftarBarang } = useRental();
+  const { barang: daftarBarang, isLoading, error, muatUlang } = useRental();
   const { user, isAdmin } = useAuth();
+
+  // Tunggu data selesai dimuat agar tidak sempat tampil "Barang tidak ditemukan".
+  if (isLoading || error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Text style={styles.backText}>Kembali</Text>
+        </Pressable>
+        <AsyncState
+          loading={isLoading}
+          error={error}
+          onRetry={muatUlang}
+          loadingText="Memuat barang..."
+        />
+      </SafeAreaView>
+    );
+  }
 
   const barang = daftarBarang.find((item) => item.id === Number(id));
 
