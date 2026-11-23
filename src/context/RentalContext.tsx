@@ -1,9 +1,13 @@
+
 import {
   getDaftarBarang,
   getDaftarTransaksi,
   kirimTransaksi,
+  tambahBarang as apiTambahBarang,
+  ubahBarang as apiUbahBarang,
+  hapusBarang as apiHapusBarang,
 } from "@/services/rentalApi";
-import { Barang } from "@/types/barang";
+import { Barang, DataBarangBaru } from "@/types/barang";
 import { Transaksi } from "@/types/transaksi";
 import { pesanError } from "@/utils/async";
 import { buatTransaksi, DataTransaksiBaru } from "@/utils/transaksi";
@@ -24,15 +28,17 @@ export interface HasilSewa {
 interface RentalContextValue {
   barang: Barang[];
   transaksi: Transaksi[];
-  /** true selama data awal (barang + transaksi) sedang dimuat */
   isLoading: boolean;
-  /** pesan error jika pemuatan data awal gagal */
   error: string | null;
   muatUlang: () => Promise<void>;
-  // Versi sinkron (tetap ada agar kode lama tidak rusak).
-  // Mengembalikan true jika berhasil, false jika stok tidak cukup.
+
+  // Cloud CRUD barang.
+  tambahBarangAsync: (data: DataBarangBaru) => Promise<Barang>;
+  ubahBarangAsync: (id: number, data: DataBarangBaru) => Promise<Barang>;
+  hapusBarangAsync: (id: number) => Promise<void>;
+
+  // Fitur penyewaan yang sudah ada.
   sewaBarang: (data: DataTransaksiBaru) => boolean;
-  // Versi async: ada proses "kirim ke server", bisa berhasil atau gagal.
   sewaBarangAsync: (data: DataTransaksiBaru) => Promise<HasilSewa>;
 }
 
@@ -47,12 +53,13 @@ export function RentalProvider({ children }: { children: ReactNode }) {
   const muatUlang = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
     try {
-      // Dua permintaan berjalan paralel (pre-built: Promise.all).
       const [dataBarang, dataTransaksi] = await Promise.all([
         getDaftarBarang(),
         getDaftarTransaksi(),
       ]);
+
       setBarang(dataBarang);
       setTransaksi(dataTransaksi);
     } catch (e) {
@@ -66,32 +73,93 @@ export function RentalProvider({ children }: { children: ReactNode }) {
     void muatUlang();
   }, [muatUlang]);
 
+  // ==========================================
+  // CLOUD CRUD BARANG
+  // ==========================================
+
+  const tambahBarangAsync = async (
+    data: DataBarangBaru,
+  ): Promise<Barang> => {
+    const barangBaru = await apiTambahBarang(data);
+
+    setBarang((prev) => [...prev, barangBaru]);
+
+    return barangBaru;
+  };
+
+  const ubahBarangAsync = async (
+    id: number,
+    data: DataBarangBaru,
+  ): Promise<Barang> => {
+    const barangDiperbarui = await apiUbahBarang(id, data);
+
+    setBarang((prev) =>
+      prev.map((item) =>
+        item.id === id ? barangDiperbarui : item,
+      ),
+    );
+
+    return barangDiperbarui;
+  };
+
+  const hapusBarangAsync = async (id: number): Promise<void> => {
+    await apiHapusBarang(id);
+
+    setBarang((prev) =>
+      prev.filter((item) => item.id !== id),
+    );
+  };
+
+  // ==========================================
+  // FITUR PENYEWAAN LAMA
+  // ==========================================
+
   const kurangiStok = (barangId: number, jumlah: number) =>
     setBarang((prev) =>
-      prev.map((b) => (b.id === barangId ? { ...b, stok: b.stok - jumlah } : b)),
+      prev.map((b) =>
+        b.id === barangId
+          ? { ...b, stok: b.stok - jumlah }
+          : b,
+      ),
     );
 
   const sewaBarang = (data: DataTransaksiBaru): boolean => {
     const target = barang.find((b) => b.id === data.barangId);
-    if (!target || data.jumlah < 1 || data.jumlah > target.stok) return false;
+
+    if (!target || data.jumlah < 1 || data.jumlah > target.stok) {
+      return false;
+    }
 
     kurangiStok(data.barangId, data.jumlah);
     setTransaksi((prev) => [...prev, buatTransaksi(data)]);
+
     return true;
   };
 
-  const sewaBarangAsync = async (data: DataTransaksiBaru): Promise<HasilSewa> => {
+  const sewaBarangAsync = async (
+    data: DataTransaksiBaru,
+  ): Promise<HasilSewa> => {
     const target = barang.find((b) => b.id === data.barangId);
-    if (!target) return { success: false, message: "Barang tidak ditemukan." };
+
+    if (!target) {
+      return {
+        success: false,
+        message: "Barang tidak ditemukan.",
+      };
+    }
 
     try {
       const transaksiBaru = await kirimTransaksi(data, target.stok);
-      // Stok & riwayat hanya berubah setelah "server" menyatakan berhasil.
+
       kurangiStok(data.barangId, data.jumlah);
       setTransaksi((prev) => [...prev, transaksiBaru]);
+
       return { success: true };
     } catch (e) {
-      return { success: false, message: pesanError(e, "Penyewaan gagal. Coba lagi.") };
+      return {
+        success: false,
+        message: pesanError(e, "Penyewaan gagal. Coba lagi."),
+      };
     }
   };
 
@@ -103,6 +171,9 @@ export function RentalProvider({ children }: { children: ReactNode }) {
         isLoading,
         error,
         muatUlang,
+        tambahBarangAsync,
+        ubahBarangAsync,
+        hapusBarangAsync,
         sewaBarang,
         sewaBarangAsync,
       }}
@@ -114,8 +185,10 @@ export function RentalProvider({ children }: { children: ReactNode }) {
 
 export function useRental(): RentalContextValue {
   const ctx = useContext(RentalContext);
+
   if (!ctx) {
     throw new Error("useRental harus dipakai di dalam RentalProvider");
   }
+
   return ctx;
 }
