@@ -1,97 +1,185 @@
 import { colors } from "@/constants/styles";
 import { useAuth } from "@/context/AuthContext";
-import { isValidEmail } from "@/utils/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
-  StyleSheet, Text, TextInput, View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, isLoading, error, clearError } = useAuth();
+  const { signIn, isLoading } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [formError, setFormError] = useState("");
+  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Bersihkan error lama dari layar lain saat masuk/keluar halaman ini.
-  useEffect(() => {
-    clearError();
-    return clearError;
-  }, [clearError]);
-
-  const canSubmit = !!email.trim() && !!password && !isLoading;
-  const errorMessage = formError || error;
-
   const handleLogin = async () => {
-    if (!canSubmit) return;
+    if (isLoading || !email.trim() || !password) return;
 
-    setFormError("");
-    if (!isValidEmail(email)) {
-      setFormError("Format email tidak valid.");
-      return;
-    }
+    setError("");
 
     const result = await signIn(email, password);
-    // Jika berhasil, state user berubah dan navigasi root mengarahkan ke beranda.
-    if (result.success) router.replace("/");
+
+    if (result.success) {
+      router.replace("/");
+    } else {
+      setError(result.message || "Login gagal.");
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.replace("/")} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color={colors.white} />
+          <Pressable
+            onPress={() => router.replace("/")}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={colors.white}
+            />
           </Pressable>
+
           <Text style={styles.topTitle}>TendaKu</Text>
         </View>
+
         <View style={styles.content}>
-          <View style={styles.logo}><Ionicons name="person-outline" size={34} color={colors.primary} /></View>
+          <View style={styles.logo}>
+            <Ionicons
+              name="person-outline"
+              size={34}
+              color={colors.primary}
+            />
+          </View>
+
           <Text style={styles.eyebrow}>AREA MEMBER TENDAKU</Text>
           <Text style={styles.title}>Selamat datang!</Text>
-          <Text style={styles.subtitle}>Login untuk menyewa perlengkapan atau mengelola TendaKu.</Text>
+          <Text style={styles.subtitle}>
+            Login untuk menyewa perlengkapan atau mengelola TendaKu.
+          </Text>
+
           <View style={styles.form}>
             <Text style={styles.label}>Email</Text>
+
             <View style={styles.inputWrap}>
-              <Ionicons name="mail-outline" size={19} color={colors.textSecondary} />
-              <TextInput value={email} onChangeText={setEmail} placeholder="nama@email.com"
-                placeholderTextColor="#8A968E" autoCapitalize="none" autoCorrect={false}
-                keyboardType="email-address" autoComplete="email" textContentType="emailAddress"
-                editable={!isLoading} style={styles.input} returnKeyType="next" />
+              <Ionicons
+                name="mail-outline"
+                size={19}
+                color={colors.textSecondary}
+              />
+
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Masukkan email"
+                placeholderTextColor="#8A968E"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                style={styles.input}
+                returnKeyType="next"
+              />
             </View>
+
             <Text style={styles.label}>Password</Text>
+
             <View style={styles.inputWrap}>
-              <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
-              <TextInput value={password} onChangeText={setPassword} placeholder="Masukkan password"
-                placeholderTextColor="#8A968E" secureTextEntry={!showPassword} autoCapitalize="none"
-                autoComplete="password" textContentType="password" editable={!isLoading}
-                style={styles.input} onSubmitEditing={handleLogin} returnKeyType="done" />
-              <Pressable onPress={() => setShowPassword((v) => !v)}>
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={19} color={colors.textSecondary} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={19}
+                color={colors.textSecondary}
+              />
+
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Masukkan password"
+                placeholderTextColor="#8A968E"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                style={styles.input}
+                onSubmitEditing={handleLogin}
+                returnKeyType="done"
+              />
+
+              <Pressable
+                onPress={() => setShowPassword((value) => !value)}
+              >
+                <Ionicons
+                  name={
+                    showPassword
+                      ? "eye-off-outline"
+                      : "eye-outline"
+                  }
+                  size={19}
+                  color={colors.textSecondary}
+                />
               </Pressable>
             </View>
-            {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
-            <Pressable onPress={handleLogin} disabled={!canSubmit}
-              style={({ pressed }) => [styles.loginButton, (pressed || isLoading) && { opacity: 0.75 },
-                !canSubmit && !isLoading && { opacity: 0.5 }]}>
-              {isLoading ? <ActivityIndicator color={colors.white} /> : <>
-                <Text style={styles.loginText}>Login</Text>
-                <Ionicons name="arrow-forward" size={19} color={colors.white} />
-              </>}
+
+            {!!error && (
+              <Text style={styles.error}>{error}</Text>
+            )}
+
+            <Pressable
+              onPress={handleLogin}
+              disabled={
+                isLoading || !email.trim() || !password
+              }
+              style={({ pressed }) => [
+                styles.loginButton,
+                (pressed || isLoading) && { opacity: 0.75 },
+                (!email.trim() || !password) && { opacity: 0.5 },
+              ]}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <>
+                  <Text style={styles.loginText}>Login</Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={19}
+                    color={colors.white}
+                  />
+                </>
+              )}
             </Pressable>
+
             <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Belum punya akun?</Text>
-              <Pressable onPress={() => router.push("/register")} disabled={isLoading}>
-                <Text style={styles.registerLink}> Daftar sekarang</Text>
+              <Text style={styles.registerText}>
+                Belum punya akun?
+              </Text>
+
+              <Pressable
+                onPress={() => router.push("/register")}
+              >
+                <Text style={styles.registerLink}>
+                  {" "}Daftar sekarang
+                </Text>
               </Pressable>
             </View>
           </View>
-          <Text style={styles.note}>Akun admin dikelola oleh pengelola TendaKu.</Text>
+
+          <Text style={styles.note}>
+            Admin menggunakan akun administrator khusus.
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -99,25 +187,140 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  keyboard: { flex: 1 },
-  topBar: { minHeight: 58, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", paddingHorizontal: 18, gap: 14 },
-  backButton: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.14)" },
-  topTitle: { color: colors.white, fontSize: 16, fontWeight: "800" },
-  content: { flex: 1, justifyContent: "center", paddingHorizontal: 24, paddingBottom: 24 },
-  logo: { width: 66, height: 66, borderRadius: 20, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 20 },
-  eyebrow: { textAlign: "center", color: colors.success, fontSize: 10, fontWeight: "900", letterSpacing: 2 },
-  title: { textAlign: "center", color: colors.text, fontSize: 28, fontWeight: "900", marginTop: 8 },
-  subtitle: { textAlign: "center", color: colors.textSecondary, fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: 26 },
-  form: { backgroundColor: colors.white, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: colors.border },
-  label: { color: colors.text, fontSize: 12, fontWeight: "800", marginBottom: 8, marginTop: 8 },
-  inputWrap: { minHeight: 50, borderRadius: 13, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 10 },
-  input: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 10 },
-  error: { color: colors.danger, fontSize: 12, marginTop: 10 },
-  loginButton: { minHeight: 50, borderRadius: 14, backgroundColor: colors.primary, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 20 },
-  loginText: { color: colors.white, fontWeight: "800", fontSize: 14 },
-  registerRow: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
-  registerText: { color: colors.textSecondary, fontSize: 12 },
-  registerLink: { color: colors.primary, fontSize: 12, fontWeight: "800" },
-  note: { textAlign: "center", color: colors.textSecondary, fontSize: 11, marginTop: 18 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboard: {
+    flex: 1,
+  },
+  topBar: {
+    minHeight: 58,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    gap: 14,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  topTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  logo: {
+    width: 66,
+    height: 66,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  eyebrow: {
+    textAlign: "center",
+    color: colors.success,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  title: {
+    textAlign: "center",
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: "900",
+    marginTop: 8,
+  },
+  subtitle: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 26,
+  },
+  form: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  label: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  inputWrap: {
+    minHeight: 50,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  error: {
+    color: colors.danger,
+    fontSize: 12,
+    marginTop: 10,
+  },
+  loginButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 20,
+  },
+  loginText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  registerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  registerText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  registerLink: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  note: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 11,
+    marginTop: 18,
+  },
 });

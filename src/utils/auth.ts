@@ -1,78 +1,78 @@
-import type { AuthUser, SupabaseUser, UserMetadata } from "@/types/auth";
+import type { User } from "@supabase/supabase-js";
+import type { AuthUser } from "@/types/auth";
 
 export const MIN_PASSWORD_LENGTH = 6;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+export const normalizeEmail = (email: string): string => {
+  return email.trim().toLowerCase();
+};
 
-export const isValidEmail = (email: string): boolean => EMAIL_PATTERN.test(email.trim());
+export const isValidEmail = (email: string): boolean => {
+  return EMAIL_PATTERN.test(email);
+};
 
-/**
- * Mengubah objek user Supabase menjadi AuthUser aplikasi.
- * Role admin hanya dipercaya dari `app_metadata` (tidak bisa diubah oleh user
- * sendiri), sedangkan `user_metadata` hanya dipakai untuk data tampilan.
- */
-export function mapSupabaseUser(user: SupabaseUser): AuthUser {
-  const metadata = (user.user_metadata ?? {}) as UserMetadata;
+export function mapSupabaseUser(user: User): AuthUser {
   const email = user.email ?? "";
+  const metadata = user.user_metadata ?? {};
+
+  const username =
+    typeof metadata.username === "string"
+      ? metadata.username
+      : email.split("@")[0] || "user";
+
+  const fullName =
+    typeof metadata.full_name === "string"
+      ? metadata.full_name
+      : username;
 
   return {
     id: user.id,
     email,
-    fullName: metadata.full_name?.trim() || email.split("@")[0] || "Pengguna",
-    role: user.app_metadata?.role === "admin" ? "admin" : "user",
+    username,
+    fullName,
+    role: "user",
   };
 }
 
-interface ErrorLike {
-  message?: string;
-  code?: string;
-  name?: string;
-  status?: number;
-}
-
-/** Menerjemahkan error Supabase Auth ke pesan bahasa Indonesia yang mudah dipahami. */
 export function translateAuthError(error: unknown): string {
-  const { message = "", code = "", name = "", status } = (error ?? {}) as ErrorLike;
-  const text = message.toLowerCase();
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error ?? "Terjadi kesalahan.");
+
+  const lowerMessage = message.toLowerCase();
 
   if (
-    name === "AuthRetryableFetchError" ||
-    text.includes("network request failed") ||
-    text.includes("failed to fetch") ||
-    text.includes("network error")
+    lowerMessage.includes("invalid login credentials") ||
+    lowerMessage.includes("invalid credentials")
   ) {
-    return "Koneksi bermasalah. Periksa internet Anda lalu coba lagi.";
+    return "Email atau password tidak sesuai.";
   }
-  if (code === "invalid_credentials" || text.includes("invalid login credentials")) {
-    return "Email atau password salah.";
+
+  if (lowerMessage.includes("email not confirmed")) {
+    return "Email belum dikonfirmasi. Silakan periksa email kamu.";
   }
-  if (code === "email_not_confirmed" || text.includes("email not confirmed")) {
-    return "Email belum diverifikasi. Silakan cek inbox email Anda.";
-  }
-  if (code === "user_already_exists" || text.includes("already registered")) {
+
+  if (lowerMessage.includes("user already registered")) {
     return "Email sudah terdaftar. Silakan login.";
   }
-  if (code === "weak_password" || text.includes("password should be at least")) {
-    return `Password terlalu lemah. Gunakan minimal ${MIN_PASSWORD_LENGTH} karakter.`;
+
+  if (lowerMessage.includes("password should be at least")) {
+    return `Password minimal ${MIN_PASSWORD_LENGTH} karakter.`;
   }
-  if (code === "validation_failed" || text.includes("unable to validate email")) {
+
+  if (lowerMessage.includes("unable to validate email")) {
     return "Format email tidak valid.";
   }
+
   if (
-    code === "over_request_rate_limit" ||
-    code === "over_email_send_rate_limit" ||
-    status === 429 ||
-    text.includes("rate limit")
+    lowerMessage.includes("network") ||
+    lowerMessage.includes("fetch")
   ) {
-    return "Terlalu banyak percobaan. Silakan tunggu beberapa saat lalu coba lagi.";
+    return "Tidak dapat terhubung ke server. Periksa koneksi internet.";
   }
-  if (code === "signup_disabled") {
-    return "Pendaftaran akun baru sedang dinonaktifkan.";
-  }
-  if (typeof status === "number" && status >= 500) {
-    return "Server sedang bermasalah. Silakan coba lagi nanti.";
-  }
-  return "Terjadi kesalahan. Silakan coba lagi.";
+
+  return message;
 }

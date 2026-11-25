@@ -8,13 +8,23 @@ import { ActivityIndicator, View } from "react-native";
 function RootNavigator() {
   const { user, isAdmin, isInitializing } = useAuth();
   const router = useRouter();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const firstSegment = segments[0];
 
-  const isAdminRoute = firstSegment === "dashboard" || firstSegment === "penyewa";
-  const isAuthRoute = firstSegment === "login" || firstSegment === "register";
+  const isAdminRoute =
+    firstSegment === "dashboard" ||
+    firstSegment === "penyewa";
+
+  const isAuthRoute =
+    firstSegment === "login" ||
+    firstSegment === "register";
+
   const isRentalRoute = firstSegment === "penyewaan";
   const isProfileRoute = firstSegment === "profile";
+
+  const isBarangAdminRoute =
+    firstSegment === "barang" &&
+    (segments[1] === "tambah" || segments[1] === "edit");
 
   useEffect(() => {
     if (isInitializing) return;
@@ -24,7 +34,11 @@ function RootNavigator() {
       return;
     }
 
-    // Penyewaan hanya untuk User yang sudah login. Admin dilarang menyewa.
+    if (isBarangAdminRoute && !isAdmin) {
+      router.replace("/");
+      return;
+    }
+
     if (isRentalRoute && (!user || isAdmin)) {
       router.replace(user ? "/" : "/login");
       return;
@@ -38,18 +52,39 @@ function RootNavigator() {
     if (isProfileRoute && !user) {
       router.replace("/login");
     }
-  }, [isAdmin, isAdminRoute, isAuthRoute, isInitializing, isProfileRoute, isRentalRoute, router, user]);
+  }, [
+    isAdmin,
+    isAdminRoute,
+    isAuthRoute,
+    isBarangAdminRoute,
+    isInitializing,
+    isProfileRoute,
+    isRentalRoute,
+    router,
+    user,
+  ]);
 
   const blockedRoute =
     (isAdminRoute && !isAdmin) ||
+    (isBarangAdminRoute && !isAdmin) ||
     (isRentalRoute && (!user || isAdmin)) ||
     (isAuthRoute && !!user) ||
     (isProfileRoute && !user);
 
   if (isInitializing || blockedRoute) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </View>
     );
   }
@@ -68,9 +103,31 @@ function RootNavigator() {
       <Stack.Screen name="profile" options={{ title: "Profil Saya" }} />
       <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
       <Stack.Screen name="penyewa" options={{ title: "Penyewa" }} />
-      <Stack.Screen name="barang/[id]" options={{ title: "Detail Barang" }} />
-      <Stack.Screen name="penyewaan/index" options={{ title: "Form Penyewaan" }} />
-      <Stack.Screen name="penyewaan/ringkasan" options={{ title: "Ringkasan Transaksi" }} />
+
+      <Stack.Screen
+        name="barang/[id]"
+        options={{ title: "Detail Barang" }}
+      />
+
+      <Stack.Screen
+        name="barang/tambah"
+        options={{ title: "Tambah Barang" }}
+      />
+
+      <Stack.Screen
+        name="barang/edit/[id]"
+        options={{ title: "Edit Barang" }}
+      />
+
+      <Stack.Screen
+        name="penyewaan/index"
+        options={{ title: "Form Penyewaan" }}
+      />
+
+      <Stack.Screen
+        name="penyewaan/ringkasan"
+        options={{ title: "Ringkasan Transaksi" }}
+      />
     </Stack>
   );
 }

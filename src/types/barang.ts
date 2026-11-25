@@ -6,5 +6,13 @@ export interface Barang {
   kategori: string;
   hargaPerHari: number;
   stok: number;
-  image: ImageSourcePropType;
+  image: ImageSourcePropType | string;
+}
+
+export interface DataBarangBaru {
+  nama: string;
+  kategori: string;
+  hargaPerHari: number;
+  stok: number;
+  imageUrl: string | null;
 }
