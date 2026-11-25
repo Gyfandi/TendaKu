@@ -12,12 +12,9 @@ function RootNavigator() {
   const firstSegment = segments[0];
 
   const isAdminRoute =
-    firstSegment === "dashboard" ||
-    firstSegment === "penyewa";
+    firstSegment === "dashboard" || firstSegment === "penyewa";
 
-  const isAuthRoute =
-    firstSegment === "login" ||
-    firstSegment === "register";
+  const isAuthRoute = firstSegment === "login" || firstSegment === "register";
 
   const isRentalRoute = firstSegment === "penyewaan";
   const isProfileRoute = firstSegment === "profile";
@@ -27,28 +24,34 @@ function RootNavigator() {
     (segments[1] === "tambah" || segments[1] === "edit");
 
   useEffect(() => {
+    // Jangan redirect selama sesi masih dipulihkan dari SecureStore.
     if (isInitializing) return;
 
+    // Halaman admin: belum login -> login, sudah login tapi bukan admin -> beranda.
     if (isAdminRoute && !isAdmin) {
-      router.replace("/");
+      router.replace(user ? "/" : "/login");
       return;
     }
 
+    // Halaman tambah/edit barang hanya untuk admin.
     if (isBarangAdminRoute && !isAdmin) {
       router.replace("/");
       return;
     }
 
+    // Penyewaan hanya untuk User yang sudah login. Admin dilarang menyewa.
     if (isRentalRoute && (!user || isAdmin)) {
       router.replace(user ? "/" : "/login");
       return;
     }
 
+    // Sudah login tidak perlu kembali ke layar login/register.
     if (isAuthRoute && user) {
       router.replace("/");
       return;
     }
 
+    // Profil hanya untuk yang sudah login.
     if (isProfileRoute && !user) {
       router.replace("/login");
     }
@@ -64,6 +67,7 @@ function RootNavigator() {
     user,
   ]);
 
+  // Tahan render rute terlarang agar tidak terjadi flicker sebelum redirect.
   const blockedRoute =
     (isAdminRoute && !isAdmin) ||
     (isBarangAdminRoute && !isAdmin) ||
@@ -81,10 +85,7 @@ function RootNavigator() {
           backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-        />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -104,15 +105,9 @@ function RootNavigator() {
       <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
       <Stack.Screen name="penyewa" options={{ title: "Penyewa" }} />
 
-      <Stack.Screen
-        name="barang/[id]"
-        options={{ title: "Detail Barang" }}
-      />
+      <Stack.Screen name="barang/[id]" options={{ title: "Detail Barang" }} />
 
-      <Stack.Screen
-        name="barang/tambah"
-        options={{ title: "Tambah Barang" }}
-      />
+      <Stack.Screen name="barang/tambah" options={{ title: "Tambah Barang" }} />
 
       <Stack.Screen
         name="barang/edit/[id]"
