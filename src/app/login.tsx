@@ -1,8 +1,9 @@
 import { colors } from "@/constants/styles";
 import { useAuth } from "@/context/AuthContext";
+import { isValidEmail } from "@/utils/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
   StyleSheet, Text, TextInput, View,
@@ -11,29 +12,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
+  const { signIn, isLoading, error, clearError } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Bersihkan error lama dari layar lain saat masuk/keluar halaman ini.
+  useEffect(() => {
+    clearError();
+    return clearError;
+  }, [clearError]);
+
+  const canSubmit = !!email.trim() && !!password && !isLoading;
+  const errorMessage = formError || error;
+
   const handleLogin = async () => {
-  if (submitting || !username.trim() || !password) return;
+    if (!canSubmit) return;
 
-  setError("");
-  setSubmitting(true);
+    setFormError("");
+    if (!isValidEmail(email)) {
+      setFormError("Format email tidak valid.");
+      return;
+    }
 
-  const success = await login(username, password);
-
-  setSubmitting(false);
-
-  if (success) {
-    router.replace("/");
-  } else {
-    setError("Username atau password tidak sesuai.");
-  }
-};
+    const result = await signIn(email, password);
+    // Jika berhasil, state user berubah dan navigasi root mengarahkan ke beranda.
+    if (result.success) router.replace("/");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -50,40 +56,42 @@ export default function LoginScreen() {
           <Text style={styles.title}>Selamat datang!</Text>
           <Text style={styles.subtitle}>Login untuk menyewa perlengkapan atau mengelola TendaKu.</Text>
           <View style={styles.form}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrap}>
-              <Ionicons name="person-outline" size={19} color={colors.textSecondary} />
-              <TextInput value={username} onChangeText={setUsername} placeholder="Masukkan username"
+              <Ionicons name="mail-outline" size={19} color={colors.textSecondary} />
+              <TextInput value={email} onChangeText={setEmail} placeholder="nama@email.com"
                 placeholderTextColor="#8A968E" autoCapitalize="none" autoCorrect={false}
-                style={styles.input} returnKeyType="next" />
+                keyboardType="email-address" autoComplete="email" textContentType="emailAddress"
+                editable={!isLoading} style={styles.input} returnKeyType="next" />
             </View>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
               <TextInput value={password} onChangeText={setPassword} placeholder="Masukkan password"
                 placeholderTextColor="#8A968E" secureTextEntry={!showPassword} autoCapitalize="none"
+                autoComplete="password" textContentType="password" editable={!isLoading}
                 style={styles.input} onSubmitEditing={handleLogin} returnKeyType="done" />
               <Pressable onPress={() => setShowPassword((v) => !v)}>
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={19} color={colors.textSecondary} />
               </Pressable>
             </View>
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            <Pressable onPress={handleLogin} disabled={submitting || !username.trim() || !password}
-              style={({ pressed }) => [styles.loginButton, (pressed || submitting) && { opacity: 0.75 },
-                (!username.trim() || !password) && { opacity: 0.5 }]}>
-              {submitting ? <ActivityIndicator color={colors.white} /> : <>
+            {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+            <Pressable onPress={handleLogin} disabled={!canSubmit}
+              style={({ pressed }) => [styles.loginButton, (pressed || isLoading) && { opacity: 0.75 },
+                !canSubmit && !isLoading && { opacity: 0.5 }]}>
+              {isLoading ? <ActivityIndicator color={colors.white} /> : <>
                 <Text style={styles.loginText}>Login</Text>
                 <Ionicons name="arrow-forward" size={19} color={colors.white} />
               </>}
             </Pressable>
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Belum punya akun?</Text>
-              <Pressable onPress={() => router.push("/register")}>
+              <Pressable onPress={() => router.push("/register")} disabled={isLoading}>
                 <Text style={styles.registerLink}> Daftar sekarang</Text>
               </Pressable>
             </View>
           </View>
-          <Text style={styles.note}>Admin menggunakan akun administrator khusus.</Text>
+          <Text style={styles.note}>Akun admin dikelola oleh pengelola TendaKu.</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

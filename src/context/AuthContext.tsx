@@ -1,4 +1,12 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
+import { AuthResult, AuthSession, AuthUser, SignUpResult } from "@/types/auth";
+import {
+  MIN_PASSWORD_LENGTH,
+  isValidEmail,
+  mapSupabaseUser,
+  normalizeEmail,
+  translateAuthError,
+} from "@/utils/auth";
 import {
   createContext,
   ReactNode,
@@ -8,180 +16,187 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AuthUser, RegisteredUser } from "@/types/auth";
-
-const SESSION_KEY = "tendaku_session";
-const USERS_KEY = "tendaku_registered_users";
-const LEGACY_ADMIN_KEY = "tendaku_admin_session";
-
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "tendaku123";
+import { AppState, Platform } from "react-native";
 
 interface AuthContextValue {
   user: AuthUser | null;
+  session: AuthSession | null;
   isAdmin: boolean;
+  /** true selama sesi tersimpan masih dipulihkan saat aplikasi dibuka. */
+  isInitializing: boolean;
+  /** true selama request signIn / signUp / signOut ke Supabase berlangsung. */
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (fullName: string, username: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => Promise<void>;
+  /** Pesan error terakhir dari Supabase (sudah diterjemahkan), atau null. */
+  error: string | null;
+  clearError: () => void;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (fullName: string, email: string, password: string) => Promise<SignUpResult>;
+  signOut: () => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  const applySession = useCallback((nextSession: AuthSession | null) => {
+    setSession(nextSession);
+    setUser(nextSession ? mapSupabaseUser(nextSession.user) : null);
+  }, []);
+
+  // Pulihkan sesi dari SecureStore, lalu ikuti perubahan sesi (login, logout, refresh token).
   useEffect(() => {
-    const restoreSession = async () => {
+    let active = true;
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (active) applySession(data.session);
+      })
+      .catch((err) => console.warn("Gagal memulihkan sesi login:", err))
+      .finally(() => {
+        if (active) setIsInitializing(false);
+      });
+
+    // Callback ini hanya mengubah state (tanpa memanggil API Supabase lain).
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      applySession(nextSession);
+    });
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, [applySession]);
+
+  // Di mobile, hentikan auto refresh token saat aplikasi di background.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void supabase.auth.startAutoRefresh();
+      else void supabase.auth.stopAutoRefresh();
+    });
+    void supabase.auth.startAutoRefresh();
+
+    return () => {
+      subscription.remove();
+      void supabase.auth.stopAutoRefresh();
+    };
+  }, []);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  const fail = useCallback((message: string): AuthResult => {
+    setError(message);
+    return { success: false, message };
+  }, []);
+
+  const signIn = useCallback(
+    async (email: string, password: string): Promise<AuthResult> => {
+      setIsLoading(true);
+      setError(null);
+
       try {
-        const savedSession = await AsyncStorage.getItem(SESSION_KEY);
-        if (savedSession) {
-          const parsed = JSON.parse(savedSession) as AuthUser;
-          if (parsed?.username && (parsed.role === "admin" || parsed.role === "user")) {
-            setUser(parsed);
-          }
-        } else {
-          // Migrasi sesi admin dari versi autentikasi sebelumnya.
-          const legacyAdmin = await AsyncStorage.getItem(LEGACY_ADMIN_KEY);
-          if (legacyAdmin === "admin") {
-            const adminUser: AuthUser = {
-              username: ADMIN_USERNAME,
-              fullName: "Administrator",
-              role: "admin",
-            };
-            await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(adminUser));
-            setUser(adminUser);
-          }
-        }
-      } catch (error) {
-        console.warn("Gagal memulihkan sesi login:", error);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizeEmail(email),
+          password,
+        });
+        if (signInError) return fail(translateAuthError(signInError));
+
+        // State user/session diperbarui oleh onAuthStateChange.
+        return { success: true };
+      } catch (err) {
+        return fail(translateAuthError(err));
       } finally {
         setIsLoading(false);
       }
-    };
+    },
+    [fail],
+  );
 
-    void restoreSession();
-  }, []);
+  const signUp = useCallback(
+    async (fullName: string, email: string, password: string): Promise<SignUpResult> => {
+      const cleanName = fullName.trim();
+      const cleanEmail = normalizeEmail(email);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const normalizedUsername = username.trim().toLowerCase();
+      // Validasi ulang sebagai pengaman jika fungsi dipanggil dari tempat lain.
+      if (!cleanName || !cleanEmail || !password) return fail("Semua kolom wajib diisi.");
+      if (!isValidEmail(cleanEmail)) return fail("Format email tidak valid.");
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        return fail(`Password minimal ${MIN_PASSWORD_LENGTH} karakter.`);
+      }
 
-    try {
-      let authenticatedUser: AuthUser | null = null;
+      setIsLoading(true);
+      setError(null);
 
-      if (normalizedUsername === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        authenticatedUser = {
-          username: ADMIN_USERNAME,
-          fullName: "Administrator",
-          role: "admin",
-        };
-      } else {
-        const rawUsers = await AsyncStorage.getItem(USERS_KEY);
-        const users: RegisteredUser[] = rawUsers ? JSON.parse(rawUsers) : [];
-        const found = users.find(
-          (item) =>
-            item.username.toLowerCase() === normalizedUsername &&
-            item.password === password,
-        );
+      try {
+        // Role tidak dikirim dari client: akun baru selalu menjadi "user".
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: { data: { full_name: cleanName } },
+        });
+        if (signUpError) return fail(translateAuthError(signUpError));
 
-        if (found) {
-          authenticatedUser = {
-            username: found.username,
-            fullName: found.fullName,
-            role: "user",
-          };
+        // Jika email sudah terdaftar & verifikasi email aktif, Supabase tidak
+        // mengembalikan error, melainkan user tanpa identities.
+        if (data.user && data.user.identities?.length === 0) {
+          return fail("Email sudah terdaftar. Silakan login.");
         }
+
+        // Tanpa session = Supabase menunggu verifikasi email.
+        return { success: true, needsEmailConfirmation: !data.session };
+      } catch (err) {
+        return fail(translateAuthError(err));
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [fail],
+  );
 
-      if (!authenticatedUser) return false;
-
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(authenticatedUser));
-      setUser(authenticatedUser);
-      return true;
-    } catch (error) {
-      console.warn("Gagal melakukan login:", error);
-      return false;
-    }
-  }, []);
-
-  const register = useCallback(async (
-    fullName: string,
-    username: string,
-    password: string,
-  ): Promise<{ success: boolean; message?: string }> => {
-    const cleanName = fullName.trim();
-    const cleanUsername = username.trim().toLowerCase();
-
-    if (!cleanName || !cleanUsername || !password) {
-      return { success: false, message: "Semua kolom wajib diisi." };
-    }
-    if (cleanUsername === ADMIN_USERNAME) {
-      return { success: false, message: "Username tersebut tidak dapat digunakan." };
-    }
-    if (cleanUsername.length < 3) {
-      return { success: false, message: "Username minimal 3 karakter." };
-    }
-    if (password.length < 6) {
-      return { success: false, message: "Password minimal 6 karakter." };
-    }
+  const signOut = useCallback(async (): Promise<AuthResult> => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const rawUsers = await AsyncStorage.getItem(USERS_KEY);
-      const users: RegisteredUser[] = rawUsers ? JSON.parse(rawUsers) : [];
-      const exists = users.some(
-        (item) => item.username.toLowerCase() === cleanUsername,
-      );
+      let { error: signOutError } = await supabase.auth.signOut();
 
-      if (exists) {
-        return { success: false, message: "Username sudah digunakan." };
+      // Jika gagal (misalnya offline), hapus sesi di perangkat saja agar
+      // token di SecureStore tetap bersih dan user bisa keluar.
+      if (signOutError) {
+        ({ error: signOutError } = await supabase.auth.signOut({ scope: "local" }));
       }
+      if (signOutError) return fail("Gagal keluar. Silakan coba lagi.");
 
-      const newUser: RegisteredUser = {
-        username: cleanUsername,
-        fullName: cleanName,
-        password,
-        role: "user",
-      };
-
-      await AsyncStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
-
-      const sessionUser: AuthUser = {
-        username: newUser.username,
-        fullName: newUser.fullName,
-        role: "user",
-      };
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-      setUser(sessionUser);
-
+      applySession(null);
       return { success: true };
-    } catch (error) {
-      console.warn("Gagal membuat akun:", error);
-      return { success: false, message: "Pendaftaran gagal. Silakan coba lagi." };
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem(SESSION_KEY);
-      await AsyncStorage.removeItem(LEGACY_ADMIN_KEY);
-    } catch (error) {
-      console.warn("Gagal menghapus sesi login:", error);
+    } catch {
+      return fail("Gagal keluar. Silakan coba lagi.");
     } finally {
-      setUser(null);
+      setIsLoading(false);
     }
-  }, []);
+  }, [applySession, fail]);
 
-  const value = useMemo(
+  const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      session,
       isAdmin: user?.role === "admin",
+      isInitializing,
       isLoading,
-      login,
-      register,
-      logout,
+      error,
+      clearError,
+      signIn,
+      signUp,
+      signOut,
     }),
-    [user, isLoading, login, register, logout],
+    [user, session, isInitializing, isLoading, error, clearError, signIn, signUp, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
