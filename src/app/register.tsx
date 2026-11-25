@@ -1,8 +1,9 @@
 import { colors } from "@/constants/styles";
 import { useAuth } from "@/context/AuthContext";
+import { MIN_PASSWORD_LENGTH, isValidEmail } from "@/utils/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
@@ -11,30 +12,57 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { signUp, isLoading, error, clearError } = useAuth();
   const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Bersihkan error lama dari layar lain saat masuk/keluar halaman ini.
+  useEffect(() => {
+    clearError();
+    return clearError;
+  }, [clearError]);
+
+  const errorMessage = formError || error;
+
+  const validate = (): string => {
+    if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
+      return "Semua kolom wajib diisi.";
+    }
+    if (!isValidEmail(email)) return "Format email tidak valid.";
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return `Password minimal ${MIN_PASSWORD_LENGTH} karakter.`;
+    }
+    if (password !== confirmPassword) return "Konfirmasi password tidak sama.";
+    return "";
+  };
+
   const handleRegister = async () => {
-    setError("");
-    if (!fullName.trim() || !username.trim() || !password || !confirmPassword) {
-      setError("Semua kolom wajib diisi.");
+    if (isLoading) return; // cegah double-submit
+
+    const validationError = validate();
+    setFormError(validationError);
+    if (validationError) return;
+
+    const result = await signUp(fullName, email, password);
+    if (!result.success) return; // pesan error sudah diset oleh AuthContext
+
+    if (result.needsEmailConfirmation) {
+      // Supabase meminta verifikasi email: tampilkan notifikasi lalu arahkan ke login.
+      setPassword("");
+      setConfirmPassword("");
+      setSuccessMessage(
+        `Pendaftaran berhasil! Kami mengirim tautan verifikasi ke ${email.trim().toLowerCase()}. Verifikasi email Anda lalu login.`,
+      );
       return;
     }
-    if (password !== confirmPassword) {
-      setError("Konfirmasi password tidak sama.");
-      return;
-    }
-    setSubmitting(true);
-    const result = await register(fullName, username, password);
-    setSubmitting(false);
-    if (result.success) router.replace("/profile");
-    else setError(result.message ?? "Pendaftaran gagal.");
+
+    // Email confirmation nonaktif: user sudah langsung login.
+    router.replace("/profile");
   };
 
   return (
@@ -56,19 +84,23 @@ export default function RegisterScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="person-outline" size={19} color={colors.textSecondary} />
               <TextInput value={fullName} onChangeText={setFullName} placeholder="Nama lengkap"
-                placeholderTextColor="#8A968E" style={styles.input} />
+                placeholderTextColor="#8A968E" autoComplete="name" textContentType="name"
+                editable={!isLoading} style={styles.input} />
             </View>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrap}>
-              <Ionicons name="at-outline" size={19} color={colors.textSecondary} />
-              <TextInput value={username} onChangeText={setUsername} placeholder="Buat username"
-                placeholderTextColor="#8A968E" autoCapitalize="none" autoCorrect={false} style={styles.input} />
+              <Ionicons name="mail-outline" size={19} color={colors.textSecondary} />
+              <TextInput value={email} onChangeText={setEmail} placeholder="nama@email.com"
+                placeholderTextColor="#8A968E" autoCapitalize="none" autoCorrect={false}
+                keyboardType="email-address" autoComplete="email" textContentType="emailAddress"
+                editable={!isLoading} style={styles.input} />
             </View>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
-              <TextInput value={password} onChangeText={setPassword} placeholder="Minimal 6 karakter"
-                placeholderTextColor="#8A968E" secureTextEntry={!showPassword} autoCapitalize="none" style={styles.input} />
+              <TextInput value={password} onChangeText={setPassword} placeholder={`Minimal ${MIN_PASSWORD_LENGTH} karakter`}
+                placeholderTextColor="#8A968E" secureTextEntry={!showPassword} autoCapitalize="none"
+                textContentType="newPassword" editable={!isLoading} style={styles.input} />
               <Pressable onPress={() => setShowPassword((v) => !v)}>
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={19} color={colors.textSecondary} />
               </Pressable>
@@ -78,19 +110,41 @@ export default function RegisterScreen() {
               <Ionicons name="shield-checkmark-outline" size={19} color={colors.textSecondary} />
               <TextInput value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Ulangi password"
                 placeholderTextColor="#8A968E" secureTextEntry={!showPassword} autoCapitalize="none"
+                textContentType="newPassword" editable={!isLoading}
                 style={styles.input} onSubmitEditing={handleRegister} />
             </View>
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            <Pressable onPress={handleRegister} disabled={submitting}
-              style={({ pressed }) => [styles.primaryButton, (pressed || submitting) && { opacity: 0.75 }]}>
-              {submitting ? <ActivityIndicator color={colors.white} /> : <>
-                <Text style={styles.buttonText}>Daftar sebagai User</Text>
+            {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+            {!!successMessage && (
+              <View style={styles.successBox}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                <Text style={styles.successText}>{successMessage}</Text>
+              </View>
+            )}
+            {successMessage ? (
+              <Pressable onPress={() => router.replace("/login")}
+                style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.75 }]}>
+                <Text style={styles.buttonText}>Ke halaman Login</Text>
                 <Ionicons name="arrow-forward" size={19} color={colors.white} />
-              </>}
-            </Pressable>
+              </Pressable>
+            ) : (
+              <Pressable onPress={handleRegister} disabled={isLoading}
+                style={({ pressed }) => [styles.primaryButton, (pressed || isLoading) && { opacity: 0.75 }]}>
+                {isLoading ? (
+                  <>
+                    <ActivityIndicator color={colors.white} />
+                    <Text style={styles.buttonText}>Memproses...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Daftar sebagai User</Text>
+                    <Ionicons name="arrow-forward" size={19} color={colors.white} />
+                  </>
+                )}
+              </Pressable>
+            )}
             <View style={styles.loginRow}>
               <Text style={styles.note}>Sudah punya akun?</Text>
-              <Pressable onPress={() => router.replace("/login")}>
+              <Pressable onPress={() => router.replace("/login")} disabled={isLoading}>
                 <Text style={styles.loginLink}> Login</Text>
               </Pressable>
             </View>
@@ -123,5 +177,7 @@ const styles = StyleSheet.create({
   loginRow: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
   note: { color: colors.textSecondary, fontSize: 12 },
   loginLink: { color: colors.primary, fontSize: 12, fontWeight: "800" },
+  successBox: { flexDirection: "row", alignItems: "flex-start", gap: 9, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#EAF3E8" },
+  successText: { flex: 1, color: colors.text, fontSize: 12, lineHeight: 18 },
   footerNote: { textAlign: "center", color: colors.textSecondary, fontSize: 11, marginTop: 18 },
 });

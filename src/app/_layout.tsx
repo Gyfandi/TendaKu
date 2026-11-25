@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 function RootNavigator() {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isInitializing } = useAuth();
   const router = useRouter();
   const segments = useSegments();
   const firstSegment = segments[0];
@@ -17,7 +17,7 @@ function RootNavigator() {
   const isProfileRoute = firstSegment === "profile";
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isInitializing) return;
 
     if (isAdminRoute && !isAdmin) {
       router.replace("/");
@@ -38,7 +38,7 @@ function RootNavigator() {
     if (isProfileRoute && !user) {
       router.replace("/login");
     }
-  }, [isAdmin, isAdminRoute, isAuthRoute, isLoading, isProfileRoute, isRentalRoute, router, user]);
+  }, [isAdmin, isAdminRoute, isAuthRoute, isInitializing, isProfileRoute, isRentalRoute, router, user]);
 
   const blockedRoute =
     (isAdminRoute && !isAdmin) ||
@@ -46,7 +46,7 @@ function RootNavigator() {
     (isAuthRoute && !!user) ||
     (isProfileRoute && !user);
 
-  if (isLoading || blockedRoute) {
+  if (isInitializing || blockedRoute) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
