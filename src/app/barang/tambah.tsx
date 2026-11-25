@@ -1,34 +1,25 @@
-
 import BarangForm from "@/components/barang-form";
 import { useRental } from "@/context/RentalContext";
 import { useRouter } from "expo-router";
 import { Alert } from "react-native";
+import type { DataBarangBaru } from "@/types/barang";
 
 export default function TambahBarangScreen() {
   const router = useRouter();
-  const { tambahBarangAsync } = useRental();
+  const { tambahBarang } = useRental();
 
-  const handleSubmit = async (
-    data: Parameters<typeof tambahBarangAsync>[0],
-  ) => {
-    try {
-      await tambahBarangAsync(data);
+  const handleSubmit = async (data: DataBarangBaru) => {
+    const result = await tambahBarang(data);
 
-      Alert.alert(
-        "Berhasil",
-        "Barang berhasil ditambahkan.",
-        [{ text: "OK", onPress: () => router.back() }],
-      );
-    } catch (error) {
-      Alert.alert(
-        "Gagal",
-        error instanceof Error
-          ? error.message
-          : "Barang gagal ditambahkan.",
-      );
-
-      throw error;
+    if (!result.success) {
+      throw new Error(result.message || "Barang gagal ditambahkan.");
     }
+
+    Alert.alert(
+      "Berhasil",
+      "Barang berhasil ditambahkan.",
+      [{ text: "OK", onPress: () => router.back() }],
+    );
   };
 
   return <BarangForm onSubmit={handleSubmit} />;

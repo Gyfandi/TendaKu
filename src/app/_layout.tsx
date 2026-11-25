@@ -1,4 +1,3 @@
-
 import { colors } from "@/constants/styles";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { RentalProvider } from "@/context/RentalContext";
@@ -7,27 +6,28 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 function RootNavigator() {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isInitializing } = useAuth();
   const router = useRouter();
   const segments = useSegments() as string[];
   const firstSegment = segments[0];
 
   const isAdminRoute =
-    firstSegment === "dashboard" || firstSegment === "penyewa";
+    firstSegment === "dashboard" ||
+    firstSegment === "penyewa";
 
   const isAuthRoute =
-    firstSegment === "login" || firstSegment === "register";
+    firstSegment === "login" ||
+    firstSegment === "register";
 
   const isRentalRoute = firstSegment === "penyewaan";
   const isProfileRoute = firstSegment === "profile";
 
-  // Halaman tambah dan edit barang hanya untuk admin.
   const isBarangAdminRoute =
     firstSegment === "barang" &&
     (segments[1] === "tambah" || segments[1] === "edit");
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isInitializing) return;
 
     if (isAdminRoute && !isAdmin) {
       router.replace("/");
@@ -39,8 +39,6 @@ function RootNavigator() {
       return;
     }
 
-    // Penyewaan hanya untuk User yang sudah login.
-    // Admin tidak diperbolehkan menyewa.
     if (isRentalRoute && (!user || isAdmin)) {
       router.replace(user ? "/" : "/login");
       return;
@@ -59,7 +57,7 @@ function RootNavigator() {
     isAdminRoute,
     isAuthRoute,
     isBarangAdminRoute,
-    isLoading,
+    isInitializing,
     isProfileRoute,
     isRentalRoute,
     router,
@@ -73,7 +71,7 @@ function RootNavigator() {
     (isAuthRoute && !!user) ||
     (isProfileRoute && !user);
 
-  if (isLoading || blockedRoute) {
+  if (isInitializing || blockedRoute) {
     return (
       <View
         style={{
@@ -83,7 +81,10 @@ function RootNavigator() {
           backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </View>
     );
   }

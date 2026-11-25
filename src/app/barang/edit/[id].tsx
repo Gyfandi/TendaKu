@@ -1,99 +1,70 @@
 
 import BarangForm from "@/components/barang-form";
 import { useRental } from "@/context/RentalContext";
+import type { DataBarangBaru } from "@/types/barang";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  Alert,
-  Text,
-  View,
-} from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, View } from "react-native";
 
 export default function EditBarangScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { barang, editBarang, isLoading } = useRental();
 
-  const {
-    barang,
-    isLoading,
-    ubahBarangAsync,
-  } = useRental();
+  const [loading, setLoading] = useState(false);
 
   const idBarang = Number(id);
+  const dataBarang = barang.find((item) => item.id === idBarang);
 
-  const barangDipilih = barang.find(
-    (item) => item.id === idBarang,
-  );
+  const handleSubmit = async (data: DataBarangBaru) => {
+    setLoading(true);
 
-  const handleSubmit = async (
-    data: Parameters<typeof ubahBarangAsync>[1],
-  ) => {
     try {
-      await ubahBarangAsync(idBarang, data);
+      const result = await editBarang(idBarang, data);
 
-      Alert.alert(
-        "Berhasil",
-        "Data barang berhasil diperbarui.",
-        [{ text: "OK", onPress: () => router.back() }],
-      );
+      if (!result.success) {
+        throw new Error(result.message || "Barang gagal diperbarui.");
+      }
+
+      Alert.alert("Berhasil", "Barang berhasil diperbarui.", [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]);
     } catch (error) {
       Alert.alert(
         "Gagal",
         error instanceof Error
           ? error.message
-          : "Data barang gagal diperbarui.",
+          : "Barang gagal diperbarui.",
       );
-
-      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   if (isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator size="large" color="#155E75" />
-        <Text style={{ marginTop: 12 }}>Memuat data barang...</Text>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  if (!Number.isInteger(idBarang) || !barangDipilih) {
+  if (!dataBarang) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          padding: 24,
-        }}
-      >
-        <Text style={{ fontSize: 16, fontWeight: "600" }}>
-          Barang tidak ditemukan.
-        </Text>
-        <Text
-          onPress={() => router.back()}
-          style={{
-            color: "#155E75",
-            marginTop: 12,
-            fontWeight: "600",
-          }}
-        >
-          Kembali
-        </Text>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
     <BarangForm
-      initialBarang={barangDipilih}
+      initialBarang={dataBarang}
       onSubmit={handleSubmit}
+      loading={loading}
     />
   );
 }

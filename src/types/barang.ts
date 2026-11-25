@@ -1,4 +1,3 @@
-
 import type { ImageSourcePropType } from "react-native";
 
 export interface Barang {
@@ -7,7 +6,7 @@ export interface Barang {
   kategori: string;
   hargaPerHari: number;
   stok: number;
-  image: ImageSourcePropType;
+  image: ImageSourcePropType | string;
 }
 
 export interface DataBarangBaru {
@@ -15,5 +14,5 @@ export interface DataBarangBaru {
   kategori: string;
   hargaPerHari: number;
   stok: number;
-  imageUrl?: string | null;
+  imageUrl: string | null;
 }

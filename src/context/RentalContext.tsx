@@ -3,9 +3,9 @@ import {
   getDaftarBarang,
   getDaftarTransaksi,
   kirimTransaksi,
-  tambahBarang as apiTambahBarang,
-  ubahBarang as apiUbahBarang,
-  hapusBarang as apiHapusBarang,
+  tambahBarang as tambahBarangCloud,
+  editBarang as editBarangCloud,
+  hapusBarang as hapusBarangCloud,
 } from "@/services/rentalApi";
 import { Barang, DataBarangBaru } from "@/types/barang";
 import { Transaksi } from "@/types/transaksi";
@@ -32,14 +32,12 @@ interface RentalContextValue {
   error: string | null;
   muatUlang: () => Promise<void>;
 
-  // Cloud CRUD barang.
-  tambahBarangAsync: (data: DataBarangBaru) => Promise<Barang>;
-  ubahBarangAsync: (id: number, data: DataBarangBaru) => Promise<Barang>;
-  hapusBarangAsync: (id: number) => Promise<void>;
-
-  // Fitur penyewaan yang sudah ada.
   sewaBarang: (data: DataTransaksiBaru) => boolean;
   sewaBarangAsync: (data: DataTransaksiBaru) => Promise<HasilSewa>;
+
+  tambahBarang: (data: DataBarangBaru) => Promise<HasilSewa>;
+  editBarang: (id: number, data: DataBarangBaru) => Promise<HasilSewa>;
+  hapusBarang: (id: number) => Promise<HasilSewa>;
 }
 
 const RentalContext = createContext<RentalContextValue | null>(null);
@@ -73,53 +71,10 @@ export function RentalProvider({ children }: { children: ReactNode }) {
     void muatUlang();
   }, [muatUlang]);
 
-  // ==========================================
-  // CLOUD CRUD BARANG
-  // ==========================================
-
-  const tambahBarangAsync = async (
-    data: DataBarangBaru,
-  ): Promise<Barang> => {
-    const barangBaru = await apiTambahBarang(data);
-
-    setBarang((prev) => [...prev, barangBaru]);
-
-    return barangBaru;
-  };
-
-  const ubahBarangAsync = async (
-    id: number,
-    data: DataBarangBaru,
-  ): Promise<Barang> => {
-    const barangDiperbarui = await apiUbahBarang(id, data);
-
-    setBarang((prev) =>
-      prev.map((item) =>
-        item.id === id ? barangDiperbarui : item,
-      ),
-    );
-
-    return barangDiperbarui;
-  };
-
-  const hapusBarangAsync = async (id: number): Promise<void> => {
-    await apiHapusBarang(id);
-
-    setBarang((prev) =>
-      prev.filter((item) => item.id !== id),
-    );
-  };
-
-  // ==========================================
-  // FITUR PENYEWAAN LAMA
-  // ==========================================
-
   const kurangiStok = (barangId: number, jumlah: number) =>
     setBarang((prev) =>
       prev.map((b) =>
-        b.id === barangId
-          ? { ...b, stok: b.stok - jumlah }
-          : b,
+        b.id === barangId ? { ...b, stok: b.stok - jumlah } : b,
       ),
     );
 
@@ -142,10 +97,7 @@ export function RentalProvider({ children }: { children: ReactNode }) {
     const target = barang.find((b) => b.id === data.barangId);
 
     if (!target) {
-      return {
-        success: false,
-        message: "Barang tidak ditemukan.",
-      };
+      return { success: false, message: "Barang tidak ditemukan." };
     }
 
     try {
@@ -163,6 +115,60 @@ export function RentalProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // CREATE: menambahkan barang ke Supabase.
+  const tambahBarang = async (
+    data: DataBarangBaru,
+  ): Promise<HasilSewa> => {
+    try {
+      const barangBaru = await tambahBarangCloud(data);
+      setBarang((prev) => [...prev, barangBaru]);
+
+      return { success: true };
+    } catch (e) {
+      return {
+        success: false,
+        message: pesanError(e, "Gagal menambahkan barang."),
+      };
+    }
+  };
+
+  // UPDATE: mengubah barang di Supabase.
+  const editBarang = async (
+    id: number,
+    data: DataBarangBaru,
+  ): Promise<HasilSewa> => {
+    try {
+      const barangDiperbarui = await editBarangCloud(id, data);
+
+      setBarang((prev) =>
+        prev.map((b) => (b.id === id ? barangDiperbarui : b)),
+      );
+
+      return { success: true };
+    } catch (e) {
+      return {
+        success: false,
+        message: pesanError(e, "Gagal mengubah barang."),
+      };
+    }
+  };
+
+  // DELETE: menghapus barang dari Supabase.
+  const hapusBarang = async (id: number): Promise<HasilSewa> => {
+    try {
+      await hapusBarangCloud(id);
+
+      setBarang((prev) => prev.filter((b) => b.id !== id));
+
+      return { success: true };
+    } catch (e) {
+      return {
+        success: false,
+        message: pesanError(e, "Gagal menghapus barang."),
+      };
+    }
+  };
+
   return (
     <RentalContext.Provider
       value={{
@@ -171,11 +177,11 @@ export function RentalProvider({ children }: { children: ReactNode }) {
         isLoading,
         error,
         muatUlang,
-        tambahBarangAsync,
-        ubahBarangAsync,
-        hapusBarangAsync,
         sewaBarang,
         sewaBarangAsync,
+        tambahBarang,
+        editBarang,
+        hapusBarang,
       }}
     >
       {children}
