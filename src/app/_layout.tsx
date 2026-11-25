@@ -8,14 +8,20 @@ import { ActivityIndicator, View } from "react-native";
 function RootNavigator() {
   const { user, isAdmin, isInitializing } = useAuth();
   const router = useRouter();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const firstSegment = segments[0];
 
   const isAdminRoute =
     firstSegment === "dashboard" || firstSegment === "penyewa";
+
   const isAuthRoute = firstSegment === "login" || firstSegment === "register";
+
   const isRentalRoute = firstSegment === "penyewaan";
   const isProfileRoute = firstSegment === "profile";
+
+  const isBarangAdminRoute =
+    firstSegment === "barang" &&
+    (segments[1] === "tambah" || segments[1] === "edit");
 
   useEffect(() => {
     // Jangan redirect selama sesi masih dipulihkan dari SecureStore.
@@ -24,6 +30,12 @@ function RootNavigator() {
     // Halaman admin: belum login -> login, sudah login tapi bukan admin -> beranda.
     if (isAdminRoute && !isAdmin) {
       router.replace(user ? "/" : "/login");
+      return;
+    }
+
+    // Halaman tambah/edit barang hanya untuk admin.
+    if (isBarangAdminRoute && !isAdmin) {
+      router.replace("/");
       return;
     }
 
@@ -47,6 +59,7 @@ function RootNavigator() {
     isAdmin,
     isAdminRoute,
     isAuthRoute,
+    isBarangAdminRoute,
     isInitializing,
     isProfileRoute,
     isRentalRoute,
@@ -57,6 +70,7 @@ function RootNavigator() {
   // Tahan render rute terlarang agar tidak terjadi flicker sebelum redirect.
   const blockedRoute =
     (isAdminRoute && !isAdmin) ||
+    (isBarangAdminRoute && !isAdmin) ||
     (isRentalRoute && (!user || isAdmin)) ||
     (isAuthRoute && !!user) ||
     (isProfileRoute && !user);
@@ -90,11 +104,21 @@ function RootNavigator() {
       <Stack.Screen name="profile" options={{ title: "Profil Saya" }} />
       <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
       <Stack.Screen name="penyewa" options={{ title: "Penyewa" }} />
+
       <Stack.Screen name="barang/[id]" options={{ title: "Detail Barang" }} />
+
+      <Stack.Screen name="barang/tambah" options={{ title: "Tambah Barang" }} />
+
+      <Stack.Screen
+        name="barang/edit/[id]"
+        options={{ title: "Edit Barang" }}
+      />
+
       <Stack.Screen
         name="penyewaan/index"
         options={{ title: "Form Penyewaan" }}
       />
+
       <Stack.Screen
         name="penyewaan/ringkasan"
         options={{ title: "Ringkasan Transaksi" }}

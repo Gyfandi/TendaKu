@@ -1,9 +1,14 @@
 import { supabase } from "@/lib/supabase";
-import { AuthResult, AuthSession, AuthUser, SignUpResult } from "@/types/auth";
+import type {
+  AuthResult,
+  AuthSession,
+  AuthUser,
+  SignUpResult,
+} from "@/types/auth";
 import {
-  MIN_PASSWORD_LENGTH,
   isValidEmail,
   mapSupabaseUser,
+  MIN_PASSWORD_LENGTH,
   normalizeEmail,
   translateAuthError,
 } from "@/utils/auth";
@@ -22,15 +27,16 @@ interface AuthContextValue {
   user: AuthUser | null;
   session: AuthSession | null;
   isAdmin: boolean;
-  /** true selama sesi tersimpan masih dipulihkan saat aplikasi dibuka. */
   isInitializing: boolean;
-  /** true selama request signIn / signUp / signOut ke Supabase berlangsung. */
   isLoading: boolean;
-  /** Pesan error terakhir dari Supabase (sudah diterjemahkan), atau null. */
   error: string | null;
   clearError: () => void;
   signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (fullName: string, email: string, password: string) => Promise<SignUpResult>;
+  signUp: (
+    fullName: string,
+    email: string,
+    password: string,
+  ) => Promise<SignUpResult>;
   signOut: () => Promise<AuthResult>;
 }
 
@@ -43,44 +49,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadProfileRole = useCallback(async (currentSession: AuthSession) => {
+    const userId = currentSession.user.id;
+
+    try {
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, username, full_name")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn("Gagal mengambil role profil:", profileError.message);
+        return;
+      }
+
+      if (!data) return;
+
+      setUser((currentUser) => {
+        if (!currentUser || currentUser.id !== userId) {
+          return currentUser;
+        }
+
+        return {
+          ...currentUser,
+          role: data.role === "admin" ? "admin" : "user",
+          username: data.username || currentUser.username,
+          fullName: data.full_name || currentUser.fullName,
+        };
+      });
+    } catch (err) {
+      console.warn("Gagal memuat profil pengguna:", err);
+    }
+  }, []);
+
   const applySession = useCallback((nextSession: AuthSession | null) => {
     setSession(nextSession);
     setUser(nextSession ? mapSupabaseUser(nextSession.user) : null);
   }, []);
 
-  // Pulihkan sesi dari SecureStore, lalu ikuti perubahan sesi (login, logout, refresh token).
   useEffect(() => {
     let active = true;
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (active) applySession(data.session);
-      })
-      .catch((err) => console.warn("Gagal memulihkan sesi login:", err))
-      .finally(() => {
-        if (active) setIsInitializing(false);
-      });
+    const restoreSession = async () => {
+      try {
+        const { data, error: sessionError } =
+          await supabase.auth.getSession();
 
-    // Callback ini hanya mengubah state (tanpa memanggil API Supabase lain).
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      applySession(nextSession);
-    });
+        if (sessionError) throw sessionError;
+        if (!active) return;
+
+        applySession(data.session);
+
+        if (data.session) {
+          void loadProfileRole(data.session);
+        }
+      } catch (err) {
+        console.warn("Gagal memulihkan sesi login:", err);
+      } finally {
+        if (active) setIsInitializing(false);
+      }
+    };
+
+    void restoreSession();
+
+    const { data } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        applySession(nextSession);
+
+        if (nextSession) {
+          setTimeout(() => {
+            void loadProfileRole(nextSession);
+          }, 0);
+        }
+      },
+    );
 
     return () => {
       active = false;
       data.subscription.unsubscribe();
     };
-  }, [applySession]);
+  }, [applySession, loadProfileRole]);
 
-  // Di mobile, hentikan auto refresh token saat aplikasi di background.
   useEffect(() => {
     if (Platform.OS === "web") return;
 
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void supabase.auth.startAutoRefresh();
-      else void supabase.auth.stopAutoRefresh();
+      if (state === "active") {
+        void supabase.auth.startAutoRefresh();
+      } else {
+        void supabase.auth.stopAutoRefresh();
+      }
     });
+
     void supabase.auth.startAutoRefresh();
 
     return () => {
@@ -89,7 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   const fail = useCallback((message: string): AuthResult => {
     setError(message);
@@ -102,13 +165,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       try {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: normalizeEmail(email),
-          password,
-        });
-        if (signInError) return fail(translateAuthError(signInError));
+        const { error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: normalizeEmail(email),
+            password,
+          });
 
-        // State user/session diperbarui oleh onAuthStateChange.
+        if (signInError) {
+          return fail(translateAuthError(signInError));
+        }
+
         return { success: true };
       } catch (err) {
         return fail(translateAuthError(err));
@@ -120,37 +186,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback(
-    async (fullName: string, email: string, password: string): Promise<SignUpResult> => {
+    async (
+      fullName: string,
+      email: string,
+      password: string,
+    ): Promise<SignUpResult> => {
       const cleanName = fullName.trim();
       const cleanEmail = normalizeEmail(email);
 
-      // Validasi ulang sebagai pengaman jika fungsi dipanggil dari tempat lain.
-      if (!cleanName || !cleanEmail || !password) return fail("Semua kolom wajib diisi.");
-      if (!isValidEmail(cleanEmail)) return fail("Format email tidak valid.");
+      if (!cleanName || !cleanEmail || !password) {
+        return fail("Semua kolom wajib diisi.");
+      }
+
+      if (!isValidEmail(cleanEmail)) {
+        return fail("Format email tidak valid.");
+      }
+
       if (password.length < MIN_PASSWORD_LENGTH) {
-        return fail(`Password minimal ${MIN_PASSWORD_LENGTH} karakter.`);
+        return fail(
+          `Password minimal ${MIN_PASSWORD_LENGTH} karakter.`,
+        );
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        // Role tidak dikirim dari client: akun baru selalu menjadi "user".
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: { data: { full_name: cleanName } },
-        });
-        if (signUpError) return fail(translateAuthError(signUpError));
+        const { data, error: signUpError } =
+          await supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: {
+                full_name: cleanName,
+              },
+            },
+          });
 
-        // Jika email sudah terdaftar & verifikasi email aktif, Supabase tidak
-        // mengembalikan error, melainkan user tanpa identities.
+        if (signUpError) {
+          return fail(translateAuthError(signUpError));
+        }
+
         if (data.user && data.user.identities?.length === 0) {
           return fail("Email sudah terdaftar. Silakan login.");
         }
 
-        // Tanpa session = Supabase menunggu verifikasi email.
-        return { success: true, needsEmailConfirmation: !data.session };
+        return {
+          success: true,
+          needsEmailConfirmation: !data.session,
+        };
       } catch (err) {
         return fail(translateAuthError(err));
       } finally {
@@ -165,14 +249,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      let { error: signOutError } = await supabase.auth.signOut();
+      const { error: signOutError } = await supabase.auth.signOut();
 
-      // Jika gagal (misalnya offline), hapus sesi di perangkat saja agar
-      // token di SecureStore tetap bersih dan user bisa keluar.
       if (signOutError) {
-        ({ error: signOutError } = await supabase.auth.signOut({ scope: "local" }));
+        return fail("Gagal keluar. Silakan coba lagi.");
       }
-      if (signOutError) return fail("Gagal keluar. Silakan coba lagi.");
 
       applySession(null);
       return { success: true };
@@ -196,16 +277,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signOut,
     }),
-    [user, session, isInitializing, isLoading, error, clearError, signIn, signUp, signOut],
+    [
+      user,
+      session,
+      isInitializing,
+      isLoading,
+      error,
+      clearError,
+      signIn,
+      signUp,
+      signOut,
+    ],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error("useAuth harus digunakan di dalam AuthProvider");
   }
+
   return context;
 }

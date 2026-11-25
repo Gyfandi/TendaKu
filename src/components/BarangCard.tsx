@@ -42,10 +42,14 @@ export default function BarangCard({
         accessibilityLabel={`Lihat detail ${barang.nama}`}
       >
         <Image
-          source={barang.image}
-          style={[cardStyles.image, { height: imageHeight }]}
-          resizeMode="cover"
-        />
+  source={
+    typeof barang.image === "string"
+      ? { uri: barang.image }
+      : barang.image
+  }
+  style={[cardStyles.image, { height: imageHeight }]}
+  resizeMode="cover"
+/>
       </Pressable>
       <View style={[cardStyles.content, compact && cardStyles.contentCompact]}>
         <View style={cardStyles.categoryRow}>

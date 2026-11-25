@@ -1,313 +1,95 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import {
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import AsyncState from "@/components/AsyncState";
-import { colors } from "@/constants/styles";
-import { useAuth } from "@/context/AuthContext";
+import BarangForm from "@/components/barang-form";
 import { useRental } from "@/context/RentalContext";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  View,
+} from "react-native";
+import type { DataBarangBaru } from "@/types/barang";
 
-const formatRupiah = (harga: number) => `Rp${harga.toLocaleString("id-ID")}`;
-
-export default function DetailBarangScreen() {
+export default function EditBarangScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { barang: daftarBarang, isLoading, error, muatUlang } = useRental();
+  const {
+    barang,
+    isLoading,
+    editBarang,
+  } = useRental();
 
-  const { user, isAdmin } = useAuth();
+  const idBarang = Number(id);
 
-  // Menampilkan loading atau error ketika data sedang dimuat.
-  if (isLoading || error) {
+  const barangDipilih = barang.find(
+    (item) => item.id === idBarang,
+  );
+
+  const handleSubmit = async (data: DataBarangBaru) => {
+    const result = await editBarang(idBarang, data);
+
+    if (!result.success) {
+      throw new Error(
+        result.message || "Data barang gagal diperbarui.",
+      );
+    }
+
+    Alert.alert(
+      "Berhasil",
+      "Data barang berhasil diperbarui.",
+      [{ text: "OK", onPress: () => router.back() }],
+    );
+  };
+
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AsyncState
-          loading={isLoading}
-          error={error}
-          onRetry={muatUlang}
-          loadingText="Memuat barang..."
-        />
-      </SafeAreaView>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color="#155E75" />
+        <Text style={{ marginTop: 12 }}>
+          Memuat data barang...
+        </Text>
+      </View>
     );
   }
 
-  // Mencari barang berdasarkan ID.
-  const barang = daftarBarang.find((item) => item.id === Number(id));
-
-  // Menampilkan pesan jika barang tidak ditemukan.
-  if (!barang) {
+  if (!Number.isInteger(idBarang) || !barangDipilih) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <Ionicons
-            name="alert-circle-outline"
-            size={48}
-            color={colors.danger}
-          />
-          <Text style={styles.title}>Barang tidak ditemukan</Text>
-          <Text style={styles.description}>
-            Data barang yang kamu cari tidak tersedia.
-          </Text>
-        </View>
-      </SafeAreaView>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 24,
+        }}
+      >
+        <Text style={{ fontSize: 16, fontWeight: "600" }}>
+          Barang tidak ditemukan.
+        </Text>
+
+        <Text
+          onPress={() => router.back()}
+          style={{
+            color: "#155E75",
+            marginTop: 12,
+            fontWeight: "600",
+          }}
+        >
+          Kembali
+        </Text>
+      </View>
     );
   }
-
-  const tersedia = barang.stok > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Gambar barang */}
-        <Image source={barang.image} style={styles.image} resizeMode="cover" />
-
-        <View style={styles.content}>
-          <Text style={styles.category}>{barang.kategori}</Text>
-
-          <Text style={styles.title}>{barang.nama}</Text>
-
-          <Text style={styles.price}>
-            {formatRupiah(barang.hargaPerHari)}
-            <Text style={styles.perDay}> / hari</Text>
-          </Text>
-
-          {/* Status stok */}
-          <View
-            style={[
-              styles.stockBadge,
-              {
-                backgroundColor: tersedia ? "#E7F5EC" : "#FDECEC",
-              },
-            ]}
-          >
-            <Ionicons
-              name={tersedia ? "checkmark-circle" : "close-circle"}
-              size={18}
-              color={tersedia ? colors.success : colors.danger}
-            />
-
-            <Text
-              style={{
-                color: tersedia ? colors.success : colors.danger,
-                fontWeight: "700",
-              }}
-            >
-              {tersedia ? `Stok tersedia: ${barang.stok}` : "Stok habis"}
-            </Text>
-          </View>
-
-          {/* Informasi barang */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Informasi Barang</Text>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Nama barang</Text>
-              <Text style={styles.value}>{barang.nama}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Kategori</Text>
-              <Text style={styles.value}>{barang.kategori}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Harga sewa</Text>
-              <Text style={styles.value}>
-                {formatRupiah(barang.hargaPerHari)} / hari
-              </Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Stok</Text>
-              <Text style={styles.value}>{barang.stok} unit</Text>
-            </View>
-          </View>
-
-          {/* Tombol penyewaan atau pemberitahuan Admin */}
-          {isAdmin ? (
-            <View style={styles.adminNotice}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={colors.primary}
-              />
-
-              <Text style={styles.adminNoticeText}>
-                Akun Admin hanya dapat mengelola perlengkapan dan tidak dapat
-                melakukan penyewaan.
-              </Text>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => {
-                if (!user) {
-                  router.push("/login");
-                  return;
-                }
-
-                router.push({
-                  pathname: "/penyewaan",
-                  params: { id: String(barang.id) },
-                });
-              }}
-              disabled={!tersedia}
-              style={({ pressed }) => [
-                styles.rentButton,
-                {
-                  opacity: !tersedia ? 0.5 : pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <Ionicons
-                name={user ? "calendar-outline" : "log-in-outline"}
-                size={20}
-                color="#FFFFFF"
-              />
-
-              <Text style={styles.rentButtonText}>
-                {!tersedia
-                  ? "Stok Habis"
-                  : user
-                    ? "Lanjut ke Penyewaan"
-                    : "Login untuk Menyewa"}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <BarangForm
+      initialBarang={barangDipilih}
+      onSubmit={handleSubmit}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  image: {
-    width: "100%",
-    height: 280,
-    backgroundColor: colors.primaryLight,
-  },
-  content: {
-    padding: 20,
-  },
-  category: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  title: {
-    marginTop: 8,
-    fontSize: 25,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  price: {
-    marginTop: 12,
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.primary,
-  },
-  perDay: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: colors.textSecondary,
-  },
-  stockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 7,
-    marginTop: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 12,
-  },
-  infoCard: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  infoTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  label: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  value: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-    textAlign: "right",
-  },
-  rentButton: {
-    marginTop: 22,
-    minHeight: 52,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  adminNotice: {
-    marginTop: 22,
-    minHeight: 58,
-    borderRadius: 14,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  adminNoticeText: {
-    flex: 1,
-    color: colors.primaryDark,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  rentButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  description: {
-    marginTop: 8,
-    textAlign: "center",
-    color: colors.textSecondary,
-  },
-});
